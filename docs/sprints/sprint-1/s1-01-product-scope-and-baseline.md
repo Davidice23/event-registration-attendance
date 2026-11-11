@@ -1,6 +1,6 @@
 # S1-01: Define Theme 3 product scope and Sprint 1 baseline
 
-สถานะ: **v0.1 — ทีมยืนยันขอบเขตแล้วและใช้เป็นฐาน S1-02; ยังไม่มี PR review หรือ implementation**<br>
+สถานะ: **ทีมยืนยัน Sprint 1 v0.2 ตามคำแจ้งของ Davidice23; ขอบเขต D-01 ถึง D-06 ไม่เปลี่ยน; ยังไม่มี PR review หรือ implementation**<br>
 โครงการ: Event Registration and Attendance System (Theme 3)<br>
 GitHub: [Davidice23/event-registration-attendance](https://github.com/Davidice23/event-registration-attendance)<br>
 กำหนดส่งรอบนี้: 15 พฤศจิกายน 2026 ตามที่ผู้ใช้ยืนยัน (Lab 5 ระบุ 23:59; เวลาของ Deliverable 1 ให้ยึดประกาศเลื่อนจริง)<br>
@@ -52,11 +52,13 @@ Sprint 1 ใช้บัญชีและข้อมูลจำลอง ไ�
 
 ## 4. Feature inventory และแผนสาม Sprint
 
-| Sprint | Feature / สิ่งที่ส่งมอบ | พึ่งพา |
+| Sprint | Feature / ผลลัพธ์และเกณฑ์ออกจาก Sprint | พึ่งพา |
 |---|---|---|
-| 1 — ลงทะเบียนครบวงจร | F-01 Auth & Identity; F-02 Publish & Discover; F-03 Register & My Registrations; F-04 Organizer Roster. เดโมได้ทั้งสองบทบาท มีผลทดสอบจริงและ release บน `main` | F-02 ต้องมี F-01; F-03 ต้องมี F-01/F-02; F-04 ต้องมี F-02/F-03 |
-| 2 — จัดการการลงทะเบียน | F-05 Cancellation; F-06 Deadlines & Capacity Management. แสดงการเปลี่ยนสถานะ การคืนที่นั่ง และการปิดรับ/ปรับความจุโดยไม่ทำกฎเดิมเสีย | ฐาน Sprint 1 และสัญญาที่กำหนดเส้นตายกับการเปลี่ยนสถานะ |
-| 3 — บันทึกผลการเข้าร่วม | F-07 Check-in; F-08 Attendance Summary. ตรวจสิทธิ์ ผลสรุป ความถูกต้องของยอด และ regression ครบก่อน final release | F-07 ใช้รายชื่อและสถานะการลงทะเบียน; F-08 ใช้ข้อมูล F-07 |
+| 1 — ลงทะเบียนครบวงจร | F-01 Auth & Identity; F-02 Publish & Discover; F-03 Register & My Registrations; F-04 Organizer Roster. ส่งมอบ flow ที่ทำงานตั้งแต่ Organizer login/publish → Participant login/register/อ่านรายการตน → Organizer เจ้าของอ่าน roster; ผ่าน AC/STS และ regression ที่ระบุ, review โดย teammate, รวม release เข้า `main` และบันทึก SHA/tag ที่ตรงกับผลทดสอบจริง | F-02 ต้องมี F-01; F-03 ต้องมี F-01/F-02; F-04 ต้องมี F-02/F-03 |
+| 2 — จัดการการลงทะเบียน | F-05 Cancellation; F-06 Deadlines & Capacity Management. ส่งมอบสถานะ/ประวัติยกเลิก การคืนที่นั่ง และการปิดรับ/ปรับความจุ โดยไม่ทำให้ duplicate, ownership หรือการกัน oversell เดิมเสีย; ตรวจ migration และ regression ก่อน review/release | ฐาน Sprint 1 และสัญญาที่กำหนดเส้นตาย/สถานะ; cancellation, capacity change และ registration ต้องใช้กติกา concurrency ที่สอดคล้องกัน |
+| 3 — บันทึกผลการเข้าร่วม | F-07 Check-in; F-08 Attendance Summary. ส่งมอบการเช็กชื่อโดย Organizer เจ้าของและสรุปที่เทียบกับข้อมูลจริง; ผ่าน authorization, integration และ full regression ก่อน reviewed final release | F-07 ใช้รายชื่อและสถานะการลงทะเบียน; F-08 ใช้ข้อมูล F-07 |
+
+**จุดตรวจตามปฏิทินรายวิชา (ไม่ใช่การยืนยันวันเริ่ม/จบ Sprint):** Project Deliverable 2 ระบุ 29 พฤศจิกายน 2026 ให้รายงาน Sprint 2 ที่เสร็จและความคืบหน้า Sprint 3; final project ระบุ 13 ธันวาคม 2026. กำหนดส่ง Lab 5 วันที่ 15 พฤศจิกายน 2026 เป็นคนละ deliverable และห้ามอนุมานว่าเป็นวันส่ง Sprint 1/Deliverable 1 ของ Group Project. ทีมต้องยืนยันตาราง Sprint จริงกับอาจารย์/ประกาศรายวิชา ไม่สร้างวันส่งขึ้นเอง
 
 Docker, CI/CD และ deployment เป็นสายงาน **Lab 5** ที่ต่อยอด Sprint 1 release ไม่ใช่ฟีเจอร์ Sprint 2 และไม่ต้องเปิด GCP เพื่อทำ S1-01
 
@@ -84,7 +86,9 @@ Docker, CI/CD และ deployment เป็นสายงาน **Lab 5** ท�
 
 **S1-01 พร้อมส่งต่อเมื่อ:** ทั้งคู่ตกลง D-01 ถึง D-06, มีขอบเขต/ข้อยกเว้นที่ชัด, ทุกข้อกำหนดในร่างชี้ไปที่ feature และ Sprint และบันทึกความเห็นที่ยังไม่ลงตัวอย่างตรงไปตรงมา จากนั้นจึงทำ System-Level SDS และ feature contracts โดยแต่ละสัญญามี Feature-Level SDS, UI/API/data spec เท่าที่เกี่ยวข้อง, Acceptance Criteria, STS และ Definition of Done ก่อนเขียนโค้ดฟีเจอร์นั้น เก็บประวัติการเปลี่ยนแปลงและหลักฐาน red→green ของกฎสำคัญ
 
-**Sprint 1 ส่งต่อ Lab 5 ได้เมื่อ:** ทำงานผ่าน Issue → feature/fix branch จาก staging → PR เข้า staging ที่เพื่อนร่วมทีมตรวจอย่างมีสาระ → integration tests → reviewed release PR เข้า `main` แล้วมี tag หรือ commit SHA ของ release ที่รันได้จริง บันทึก setup, คำสั่ง, ผลทดสอบ และเวอร์ชันที่ทดสอบให้ตรงกับ release; ถ้ามีผล fail/skip ให้รายงาน ไม่อ้างผลจาก commit อื่นหรืออ้างว่าอาจารย์ตรวจรับแล้วโดยไม่มีหลักฐาน ณ วันที่ร่างนี้ยังไม่มี release/PR/test result ที่อ้างอิงได้
+**Sprint 1 ส่งต่อ Lab 5 ได้เมื่อ:** ทำงานผ่าน Issue → feature/fix branch จาก staging → PR เข้า staging ที่เพื่อนร่วมทีมตรวจอย่างมีสาระ → integration tests → reviewed release PR เข้า `main` แล้วมี tag หรือ commit SHA ของ release ที่รันได้จริง บันทึก setup, คำสั่ง, ผลทดสอบ และเวอร์ชันที่ทดสอบให้ตรงกับ release; ถ้ามีผล fail/skip ให้รายงาน ไม่อ้างผลจาก commit อื่นหรืออ้างว่าอาจารย์ตรวจรับแล้วโดยไม่มีหลักฐาน การส่งต่อเป็น baseline สำหรับทำข้อกำหนด Lab 5 (Docker/CI/CD/deployment) ไม่ได้แปลว่า R-01–R-12 หรือ C-01–C-06 เสร็จแล้ว และไม่ใช่หลักฐาน deploy/ตรวจรับ
+
+**บันทึกการปรับแผน v0.2:** เพิ่มผลลัพธ์/เกณฑ์ออกจากแต่ละ Sprint และแยกวัน checkpoint ของ Group Project ออกจากกำหนดส่ง Lab 5 โดยไม่เปลี่ยนการตัดสินใจ D-01 ถึง D-06 ดู [บันทึกการยืนยัน Sprint 1 v0.2](s1-02-system-level-sds.md)
 
 ## เอกสารอ้างอิง
 

@@ -1,6 +1,6 @@
 # S1-02 — System-Level Software Design Specification
 
-**สถานะ:** v0.1 — ทีมยืนยันตามคำแจ้งของ Davidice23; จัดเตรียมสำหรับ PR แบบ local; ยังไม่มี PR review, implementation หรือผลทดสอบ<br>
+**สถานะ:** v0.2 — ทีมยืนยันตามคำแจ้งของ Davidice23; ยังไม่มี PR review, implementation หรือผลทดสอบ<br>
 **โครงการ:** Event Registration and Attendance System (Theme 3), เวิร์กช็อปมหาวิทยาลัยที่มีที่นั่งจำกัด<br>
 **ฐานข้อกำหนด:** [S1-01 v0.1 (D-01 ถึง D-06)](s1-01-product-scope-and-baseline.md)<br>
 **สัญญาและชุดทดสอบที่วางแผน:** [Sprint 1 Feature Contracts & STS](s1-02-feature-contracts-and-sts.md)
@@ -79,11 +79,15 @@ PostgreSQL: Users, Sessions, Events, Registrations
 
 สร้าง migration ที่ version ใน Git สำหรับตาราง FK/index/constraints; มี seed แบบทำซ้ำได้สำหรับ Organizer A/B และ Participant A/B ด้วยข้อมูลสังเคราะห์ ไม่ reset แถวที่ผู้ใช้สร้างและไม่ฝังรหัสผ่านจริง. Integration test ใช้ PostgreSQL จริงที่แยกไว้; จัดข้อมูลเฉพาะ test เพื่อให้รันซ้ำได้ ไม่ reset schema นอกฐานทดสอบที่ระบุ. เลือก Vitest และ Playwright เป็นเครื่องมือที่เสนอ; คำสั่งใน README เช่น `npm ci`, `npm run build`, `npm run test:unit`, `npm run test:integration`, `npm run test:e2e`, `npm run db:migrate`, `npm run db:seed`, `npm run dev` เป็น **ชื่อที่วางแผน ยังไม่มีสคริปต์หรือผลการรัน** ให้ยืนยันและบันทึกคำสั่งจริงหลัง scaffold
 
-Lab 5 เท่านั้น: บรรจุ UI/API ใน Docker; เสนอ Cloud Run + Artifact Registry + Cloud SQL for PostgreSQL + Secret Manager (reference stack ไม่ใช่ข้อบังคับ). ไม่เก็บ session/ข้อมูลใน container; migration เป็นขั้นแยกก่อนอัปเดต service ตามแผนที่ทีมตรวจ; CI ตรวจ PR เข้า staging และ `main`, release deploy จาก `main` เท่านั้น, บันทึก revision กับ SHA. ภายหลังปรับ Starter Kit ให้ตรงแอปและเขียน `docs/labs/lab-05/deployment.md` ไม่สร้างทรัพยากรหรือเปลี่ยน billing/IAM/DB จริงใน S1-02
+**Lab 5 เป็นงานต่อยอด ไม่ใช่เกณฑ์ที่อ้างว่า Sprint 1 ทำเสร็จแล้ว:** ใช้ release/tag/SHA ของ Sprint 1 ที่ผ่านการทดสอบและ teammate review เป็น baseline ก่อนเริ่ม. ตาม handout updated ให้ติดตาม requirement IDs R-01–R-12 และ criteria C-01–C-06 ใน Issue/หลักฐาน Lab 5; อย่างน้อยต้องพิสูจน์ Docker build จาก clean checkout, การตั้งค่า/secret โดยไม่ commit secret, persistence หลัง restart และ redeploy, CI checks และการบล็อก PR ชั่วคราวที่จงใจทำให้ fail, การ release/deploy จาก `main` พร้อมระบุ revision/SHA, workflow/หลักฐานทีม และ public access ตามข้อกำหนดที่เกี่ยวข้อง. ให้ทำตาราง R/C → implementation/CI evidence ใน `docs/labs/lab-05/deployment.md` ตอนถึง phase นั้น; อย่าทำเครื่องหมาย R/C ว่าผ่านจากเอกสารนี้หรือจาก local tests อย่างเดียว
+
+Cloud Run + Artifact Registry + Cloud SQL for PostgreSQL + Secret Manager เป็น reference stack ไม่ใช่ข้อบังคับ; ยืนยันทางเลือกก่อนเริ่ม deployment. ไม่เก็บ session/ข้อมูลใน container; migration เป็นขั้นแยกก่อนอัปเดต service ตามแผนที่ทีมตรวจ. การเขียนสัญญา Sprint 1 นี้ไม่อนุญาตให้สร้าง/เปลี่ยน GCP resources, billing, IAM, secrets, repository visibility หรือฐานข้อมูลจริง
 
 ## 6. จุดตรวจเอกสารก่อนส่งต่อ
 
-- **บันทึกการยืนยัน S1-02 v0.1:** Davidice23 แจ้งในแชตว่า `ทั้งคู่ยืนยัน S1-02 v0.1` สำหรับ Davidice23 และ Khawpun124 ครอบคลุม System-Level SDS และสัญญา F-01–F-04 โดยไม่ได้แจ้งข้อแก้ไข บันทึกนี้มาจากคำแจ้งของ Davidice23 ไม่ใช่ GitHub PR review หรือการตรวจรับของอาจารย์
+- **บันทึกการยืนยัน S1-02 v0.1:** Davidice23 แจ้งในแชตว่า `ทั้งคู่ยืนยัน S1-02 v0.1` สำหรับ Davidice23 และ Khawpun124 ครอบคลุม System-Level SDS และสัญญา F-01–F-04 โดยไม่ได้แจ้งข้อแก้ไข
+- **บันทึกการยืนยัน Sprint 1 v0.2:** หลังแก้ T-03/T-09 รอบล่าสุด Davidice23 แจ้งในแชตว่าทั้งคู่ยืนยัน Sprint 1 v0.2 แล้ว และอนุญาตเฉพาะ local commit นี่เป็นบันทึกตามคำแจ้งของ Davidice23 ไม่ใช่ GitHub PR review, ผลทดสอบ หรือการตรวจรับของอาจารย์
 - ตรวจความสอดคล้องของ permission matrix, DTO, วันเวลา และ capacity/duplicate precedence กับสัญญา F-01–F-04; ทีมบันทึกคำยืนยัน/ข้อแก้ไขจริงสำหรับ **S1-02** แยกจากการอนุมัติ S1-01
 - ก่อนโค้ด ให้นำเวอร์ชันเอกสารที่ทีมตรวจแล้วเข้า repository ผ่านขั้นที่ได้รับอนุญาต เพื่อมีประวัติ contract ก่อน implementation; สำหรับ Lab 5 ใช้ Sprint 1 release ที่ทดสอบและรีวิวแล้วบน `main` พร้อม tag/SHA เท่านั้น
+- **แก้ไขหลัง audit v0.2:** ทำ T-09 ให้พิสูจน์การแย่ง lock แบบกำหนดจังหวะได้, ทำ T-10 ให้มีข้อมูลของผู้ใช้ทั้งสองฝั่งและตรวจ owner scope, ขยาย negative coverage ของ auth/CSRF, ทำ DoD ให้มีคู่มือและหลักฐานที่ทำซ้ำได้, และแยก Lab 5 R/C เป็นเกณฑ์ภายหลังที่ต้องพิสูจน์จริง. การแก้เอกสารนี้ยังไม่ใช่ implementation/test evidence
 - แหล่งข้อกำหนด: Group Work Specification §6, §8; Project Deliverable 1 §§3.3, 3.5–3.6; Lab 5 updated handout §4
