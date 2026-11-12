@@ -13,6 +13,12 @@ declare global {
   }
 }
 
+export function isJsonContentType(contentType?: string): boolean {
+  if (!contentType) return false;
+  const mediaType = contentType.split(";")[0]?.trim().toLowerCase();
+  return mediaType === "application/json";
+}
+
 export function createCsrfAndMediaGuard(appOrigin: string) {
   return (req: Request, res: Response, next: NextFunction) => {
     // Only check mutating requests (POST, PUT, PATCH, DELETE)
@@ -28,7 +34,7 @@ export function createCsrfAndMediaGuard(appOrigin: string) {
       }
 
       const contentType = req.headers["content-type"];
-      if (!contentType || !contentType.toLowerCase().startsWith("application/json")) {
+      if (!isJsonContentType(contentType)) {
         return res.status(415).json({
           error: {
             code: "UNSUPPORTED_MEDIA_TYPE",

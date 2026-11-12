@@ -518,7 +518,18 @@ describe("Sprint 1 STS — F-01 Auth & Session Lifecycle Integration Tests", () 
         error: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Unsupported media type. JSON is required." },
       });
 
-      // Verify no session was created by rejected login requests
+      // 3b. POST /api/auth/login with application/jsonx -> 415 UNSUPPORTED_MEDIA_TYPE
+      const loginJsonxMedia = await fetch(`${origin}/api/auth/login`, {
+        method: "POST",
+        headers: { "Origin": appOrigin, "Content-Type": "application/jsonx" },
+        body: JSON.stringify({ email: organizerEmail, password: organizerPassword }),
+      });
+      expect(loginJsonxMedia.status).toBe(415);
+      expect(await loginJsonxMedia.json()).toEqual({
+        error: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Unsupported media type. JSON is required." },
+      });
+
+      // Verify no session was created by rejected login requests (including form and application/jsonx)
       expect(await prisma.session.count()).toBe(baselineSessions);
 
       // 4. POST /api/events with missing Origin -> 403
