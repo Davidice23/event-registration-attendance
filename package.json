@@ -1,0 +1,35 @@
+{
+  "name": "event-registration-attendance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@11.9.0",
+  "engines": {
+    "node": ">=24.14.0 <25",
+    "npm": ">=11.9.0 <12"
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "build": "npm run db:generate && npm run build --workspaces",
+    "test": "npm run db:generate && npm run test:safety && npm run test --workspaces",
+    "test:safety": "node --test scripts/safety.test.mjs",
+    "test:integration": "npm run db:generate && node scripts/run-integration-tests.mjs",
+    "db:generate": "node scripts/prisma-local.mjs generate",
+    "db:validate": "node scripts/prisma-local.mjs validate",
+    "db:migrate": "node scripts/db-command.mjs dev migrate deploy",
+    "db:migrate:test": "node scripts/db-command.mjs test migrate deploy",
+    "db:reset:test": "node scripts/db-command.mjs test reset",
+    "db:seed": "tsx scripts/seed-local.ts"
+  },
+  "devDependencies": {
+    "dotenv": "17.4.2",
+    "prisma": "7.10.1",
+    "tsx": "4.20.6"
+  }
+}

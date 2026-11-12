@@ -1,0 +1,36 @@
+services:
+  postgres-dev:
+    image: postgres:18.1-alpine
+    environment:
+      POSTGRES_USER: event_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env and set a local-only password}
+      POSTGRES_DB: event_registration_dev
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - event-registration-dev-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U event_app -d event_registration_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  postgres-test:
+    image: postgres:18.1-alpine
+    environment:
+      POSTGRES_USER: event_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env and set a local-only password}
+      POSTGRES_DB: event_registration_test
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - event-registration-test-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U event_app -d event_registration_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  event-registration-dev-data:
+  event-registration-test-data:
