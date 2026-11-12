@@ -85,6 +85,35 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
   margin: clamp(2rem, 6vh, 4rem) auto;
 }
 
+.logout-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding: 0.85rem 1.25rem;
+  border: 1px solid #f0a39e;
+  border-radius: 0.6rem;
+  background: #fdf2f2;
+  color: #991b1b;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.btn-dismiss {
+  border: none;
+  background: transparent;
+  color: #991b1b;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.3rem;
+}
+
+.btn-dismiss:hover {
+  background: rgb(153 27 27 / 10%);
+}
+
 .welcome-card, .login-card, .dashboard-card {
   padding: clamp(1.5rem, 5vw, 3rem);
   border: 1px solid #cbdad1;

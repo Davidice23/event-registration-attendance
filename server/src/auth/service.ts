@@ -30,28 +30,27 @@ export async function createSession(
   userId: string,
   priorToken?: string,
 ): Promise<{ token: string; expiresAt: Date }> {
-  // Session replacement: If a prior session token was supplied, revoke it
-  if (priorToken && typeof priorToken === "string") {
-    const priorHash = hashSessionToken(priorToken);
-    try {
-      await prisma.session.deleteMany({
-        where: { tokenHash: priorHash },
-      });
-    } catch {
-      // Best-effort cleanup, do not block creation of the new session
-    }
-  }
-
   const token = generateSessionToken();
   const tokenHash = hashSessionToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-  await prisma.session.create({
-    data: {
-      tokenHash,
-      userId,
-      expiresAt,
-    },
+  // Atomic session replacement via database transaction:
+  // Deleting the prior session and persisting the new session succeed or fail together.
+  await prisma.$transaction(async (tx) => {
+    if (priorToken && typeof priorToken === "string") {
+      const priorHash = hashSessionToken(priorToken);
+      await tx.session.deleteMany({
+        where: { tokenHash: priorHash },
+      });
+    }
+
+    await tx.session.create({
+      data: {
+        tokenHash,
+        userId,
+        expiresAt,
+      },
+    });
   });
 
   return { token, expiresAt };
@@ -99,13 +98,9 @@ export async function revokeSession(
 ): Promise<void> {
   if (!token || typeof token !== "string") return;
   const tokenHash = hashSessionToken(token);
-  try {
-    await prisma.session.deleteMany({
-      where: { tokenHash },
-    });
-  } catch {
-    // Safe to ignore if row does not exist
-  }
+  await prisma.session.deleteMany({
+    where: { tokenHash },
+  });
 }
 
 export async function authenticateUser(

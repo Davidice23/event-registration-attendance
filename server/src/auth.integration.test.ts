@@ -175,7 +175,7 @@ describe("Sprint 1 STS — F-01 Auth & Session Lifecycle Integration Tests", () 
       });
     });
 
-    it("replaces and revokes prior session when a new login request includes an existing session cookie", async () => {
+    it("replaces and revokes prior session atomically when a new login request includes an existing session cookie", async () => {
       // First login
       const firstLogin = await fetch(`${origin}/api/auth/login`, {
         method: "POST",
@@ -347,6 +347,52 @@ describe("Sprint 1 STS — F-01 Auth & Session Lifecycle Integration Tests", () 
           },
         });
       }
+    });
+
+    it("responds 501 NOT_IMPLEMENTED rather than 200/201 when authenticated users call unreleased feature routes", async () => {
+      // Login as Organizer
+      const orgLogin = await fetch(`${origin}/api/auth/login`, {
+        method: "POST",
+        headers: { "Origin": appOrigin, "Content-Type": "application/json" },
+        body: JSON.stringify({ email: organizerEmail, password: organizerPassword }),
+      });
+      const orgSid = parseCookies(orgLogin.headers.get("set-cookie")!)[SESSION_COOKIE_NAME];
+
+      // POST /api/events with valid auth & origin returns 501 NOT_IMPLEMENTED instead of fake 201
+      const publishRes = await fetch(`${origin}/api/events`, {
+        method: "POST",
+        headers: { "Origin": appOrigin, "Content-Type": "application/json", "Cookie": `sid=${orgSid}` },
+        body: JSON.stringify({ title: "New Workshop" }),
+      });
+      expect(publishRes.status).toBe(501);
+      expect(await publishRes.json()).toEqual({
+        error: {
+          code: "NOT_IMPLEMENTED",
+          message: "Event publication endpoint will be implemented in F-02.",
+        },
+      });
+
+      // Login as Participant
+      const partLogin = await fetch(`${origin}/api/auth/login`, {
+        method: "POST",
+        headers: { "Origin": appOrigin, "Content-Type": "application/json" },
+        body: JSON.stringify({ email: participantEmail, password: participantPassword }),
+      });
+      const partSid = parseCookies(partLogin.headers.get("set-cookie")!)[SESSION_COOKIE_NAME];
+
+      // POST /api/events/:id/registrations with valid auth & origin returns 501 NOT_IMPLEMENTED
+      const regRes = await fetch(`${origin}/api/events/11111111-1111-1111-1111-111111111111/registrations`, {
+        method: "POST",
+        headers: { "Origin": appOrigin, "Content-Type": "application/json", "Cookie": `sid=${partSid}` },
+        body: JSON.stringify({}),
+      });
+      expect(regRes.status).toBe(501);
+      expect(await regRes.json()).toEqual({
+        error: {
+          code: "NOT_IMPLEMENTED",
+          message: "Event registration endpoint will be implemented in F-03.",
+        },
+      });
     });
 
     it("rejects login request with unexpected fields like role or id with 400 VALIDATION_ERROR", async () => {
@@ -544,6 +590,98 @@ describe("Sprint 1 STS — F-01 Auth & Session Lifecycle Integration Tests", () 
       expect(await prisma.session.count()).toBe(baselineSessions);
       expect(await prisma.event.count()).toBe(baselineEvents);
       expect(await prisma.registration.count()).toBe(baselineRegistrations);
+    });
+
+    it("returns 503 TEMPORARILY_UNAVAILABLE and does not clear cookie when database fails during logout", async () => {
+      // Create dedicated failing app server instance
+      const failingPrisma = new Proxy(prisma, {
+        get(target, prop) {
+          if (prop === "session") {
+            return {
+              ...target.session,
+              deleteMany: async () => {
+                throw new Error("Simulated database failure during logout");
+              },
+            };
+          }
+          return Reflect.get(target, prop);
+        },
+      });
+
+      const failingApp = createApp({ prisma: failingPrisma, appOrigin, secureCookies: false });
+      const failServer = createServer(failingApp);
+      await new Promise<void>((resolve) => failServer.listen(0, "127.0.0.1", resolve));
+      const failAddress = failServer.address();
+      if (!failAddress || typeof failAddress === "string") throw new Error("Expected address");
+      const failOrigin = `http://127.0.0.1:${failAddress.port}`;
+
+      try {
+        const logoutRes = await fetch(`${failOrigin}/api/auth/logout`, {
+          method: "POST",
+          headers: {
+            "Origin": appOrigin,
+            "Content-Type": "application/json",
+            "Cookie": "sid=active-session-token",
+          },
+          body: JSON.stringify({}),
+        });
+
+        expect(logoutRes.status).toBe(503);
+        expect(logoutRes.headers.get("set-cookie")).toBeNull();
+        expect(await logoutRes.json()).toEqual({
+          error: {
+            code: "TEMPORARILY_UNAVAILABLE",
+            message: "Unable to revoke session due to a database error. Please try again.",
+          },
+        });
+      } finally {
+        await new Promise<void>((resolve) => failServer.close(() => resolve()));
+      }
+    });
+
+    it("returns 503 TEMPORARILY_UNAVAILABLE when database transaction fails during login session creation", async () => {
+      const failingPrisma = new Proxy(prisma, {
+        get(target, prop) {
+          if (prop === "$transaction") {
+            return async () => {
+              throw new Error("Simulated database transaction failure during login");
+            };
+          }
+          return Reflect.get(target, prop);
+        },
+      });
+
+      const failingApp = createApp({ prisma: failingPrisma, appOrigin, secureCookies: false });
+      const failServer = createServer(failingApp);
+      await new Promise<void>((resolve) => failServer.listen(0, "127.0.0.1", resolve));
+      const failAddress = failServer.address();
+      if (!failAddress || typeof failAddress === "string") throw new Error("Expected address");
+      const failOrigin = `http://127.0.0.1:${failAddress.port}`;
+
+      try {
+        const loginRes = await fetch(`${failOrigin}/api/auth/login`, {
+          method: "POST",
+          headers: {
+            "Origin": appOrigin,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: organizerEmail,
+            password: organizerPassword,
+          }),
+        });
+
+        expect(loginRes.status).toBe(503);
+        expect(loginRes.headers.get("set-cookie")).toBeNull();
+        expect(await loginRes.json()).toEqual({
+          error: {
+            code: "TEMPORARILY_UNAVAILABLE",
+            message: "Database error during session creation. Please try again.",
+          },
+        });
+      } finally {
+        await new Promise<void>((resolve) => failServer.close(() => resolve()));
+      }
     });
   });
 });

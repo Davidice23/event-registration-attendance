@@ -43,6 +43,24 @@ describe("client/src/api/auth", () => {
         AuthApiError,
       );
     });
+
+    it("throws AuthApiError on 503 database error", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => ({
+          error: {
+            code: "TEMPORARILY_UNAVAILABLE",
+            message: "Database error during session creation. Please try again.",
+          },
+        }),
+      } as Response);
+
+      await expect(login({ email: "organizer-a@example.test", password: "password123" })).rejects.toMatchObject({
+        code: "TEMPORARILY_UNAVAILABLE",
+        message: "Database error during session creation. Please try again.",
+      });
+    });
   });
 
   describe("fetchCurrentUser()", () => {
@@ -95,7 +113,7 @@ describe("client/src/api/auth", () => {
       await expect(logout()).resolves.toBeUndefined();
     });
 
-    it("throws AuthApiError when logout fails", async () => {
+    it("throws AuthApiError when logout fails with 403 CSRF", async () => {
       vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
         ok: false,
         status: 403,
@@ -108,6 +126,24 @@ describe("client/src/api/auth", () => {
       } as Response);
 
       await expect(logout()).rejects.toThrow(AuthApiError);
+    });
+
+    it("throws AuthApiError with message and code on 503 database error", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => ({
+          error: {
+            code: "TEMPORARILY_UNAVAILABLE",
+            message: "Unable to revoke session due to a database error. Please try again.",
+          },
+        }),
+      } as Response);
+
+      await expect(logout()).rejects.toMatchObject({
+        code: "TEMPORARILY_UNAVAILABLE",
+        message: "Unable to revoke session due to a database error. Please try again.",
+      });
     });
   });
 });

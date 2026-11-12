@@ -9,6 +9,7 @@ export function App() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [apiStatus, setApiStatus] = useState<ApiStatus>("checking");
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   useEffect(() => {
     // 1. Check API health
@@ -38,10 +39,18 @@ export function App() {
   }, []);
 
   const handleLogout = async () => {
+    setLogoutError(null);
     try {
       await logout();
-    } finally {
+      // Only clear user state once logout has succeeded
       setCurrentUser(null);
+    } catch (err: unknown) {
+      // Do not clear user state if revocation failed on the server
+      if (err instanceof Error) {
+        setLogoutError(err.message);
+      } else {
+        setLogoutError("Failed to sign out. Please try again.");
+      }
     }
   };
 
@@ -78,6 +87,20 @@ export function App() {
       </header>
 
       <div className="content-container">
+        {logoutError && (
+          <div className="logout-error-banner" role="alert" aria-live="assertive">
+            <span>{logoutError}</span>
+            <button
+              type="button"
+              className="btn-dismiss"
+              onClick={() => setLogoutError(null)}
+              aria-label="Dismiss error"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {isLoadingAuth ? (
           <div className="loading-indicator" role="status" aria-live="polite">
             Loading session…

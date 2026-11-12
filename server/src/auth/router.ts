@@ -66,23 +66,31 @@ export function createAuthRouter(options: AuthRouterOptions): Router {
         });
     }
 
-    // Session replacement: If an existing session token is provided, revoke it
+    // Atomic session replacement: Prior token is revoked inside transaction with new session creation
     const cookies = parseCookies(req.headers.cookie);
     const priorToken = cookies[SESSION_COOKIE_NAME];
 
-    const { token } = await createSession(prisma, user.id, priorToken);
-
-    res.setHeader("Set-Cookie", serializeSessionCookie(token, { secure: secureCookies }));
-    return res
-      .set("Cache-Control", "no-store")
-      .status(200)
-      .json({
-        data: {
-          id: user.id,
-          displayName: user.displayName,
-          role: user.role,
+    try {
+      const { token } = await createSession(prisma, user.id, priorToken);
+      res.setHeader("Set-Cookie", serializeSessionCookie(token, { secure: secureCookies }));
+      return res
+        .set("Cache-Control", "no-store")
+        .status(200)
+        .json({
+          data: {
+            id: user.id,
+            displayName: user.displayName,
+            role: user.role,
+          },
+        });
+    } catch {
+      return res.status(503).json({
+        error: {
+          code: "TEMPORARILY_UNAVAILABLE",
+          message: "Database error during session creation. Please try again.",
         },
       });
+    }
   });
 
   router.get("/me", (req: Request, res: Response) => {
@@ -129,9 +137,19 @@ export function createAuthRouter(options: AuthRouterOptions): Router {
     const cookies = parseCookies(req.headers.cookie);
     const token = cookies[SESSION_COOKIE_NAME];
     if (token) {
-      await revokeSession(prisma, token);
+      try {
+        await revokeSession(prisma, token);
+      } catch {
+        return res.status(503).json({
+          error: {
+            code: "TEMPORARILY_UNAVAILABLE",
+            message: "Unable to revoke session due to a database error. Please try again.",
+          },
+        });
+      }
     }
 
+    // Only clear cookie and respond 204 once session revocation is confirmed
     res.setHeader("Set-Cookie", clearSessionCookie({ secure: secureCookies }));
     return res.status(204).end();
   });
