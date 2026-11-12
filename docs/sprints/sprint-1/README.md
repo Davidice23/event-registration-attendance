@@ -2,7 +2,7 @@
 
 เอกสารนี้เป็นดัชนีเอกสารขอบเขตและออกแบบ Sprint 1 ของ CPE334 Group Project — Theme 3: Event Registration and Attendance System
 
-สถานะ ณ 12 พฤศจิกายน 2026: ทีมแจ้งยืนยัน Sprint 1 เอกสาร v0.2 แล้ว; commit local `bf8e489` มีการปรับ audit follow-up. PR เอกสารยังไม่เปิด/รีวิว/merge; ยังไม่มี implementation หรือผลทดสอบแอป. ขั้นเผยแพร่ที่อนุมัติคือใช้ `staging` เป็น base และเปิด PR จาก `docs/sprint-1-design-contracts` เพื่อให้ Khawpun124 รีวิว โดยยังไม่ merge
+สถานะ ณ 12 พฤศจิกายน 2026: ทีมแจ้งยืนยันเอกสาร Sprint 1 v0.2 แล้ว. เอกสารทั้งชุดผ่าน PR #1 ซึ่ง Khawpun124 รีวิวและ approve ก่อน merge เข้า `staging`; merge commit คือ `1f964288e7700da6e9a1a48e3d1aa62adcecfb91`. นี่เป็น peer review ของเอกสารเท่านั้น ไม่ใช่การตรวจรับจากอาจารย์หรือ release ของ Sprint 1. ยังไม่มี application implementation, ผลทดสอบแอป หรือ release บน `main`.
 
 ## เอกสาร
 
@@ -12,7 +12,7 @@
 
 ## ขอบเขตของชุดเอกสาร
 
-ชุดนี้กำหนดแนวทางและ acceptance criteria ก่อนเริ่มโค้ด ไม่ใช่หลักฐานว่าฟีเจอร์ถูก implement, ทดสอบ, teammate-reviewed บน PR, accepted by instructor, หรือ released แล้ว รายการทดสอบใน STS ยังเป็น planned/not run. การยืนยัน v0.2 และการอนุมัติในแชตบันทึกตามที่ Davidice23 แจ้ง และไม่แทน GitHub PR review
+ชุดนี้กำหนดแนวทางและ acceptance criteria ก่อนเริ่มโค้ด. การรีวิวและ merge ของเอกสารมีหลักฐานใน PR #1; สิ่งนี้ไม่ใช่หลักฐานว่า application features ถูก implement/tested, ได้รับการตรวจรับจากอาจารย์ หรือ release แล้ว. รายการทดสอบใน STS ยังเป็น planned/not run. การยืนยันทีม v0.2 ในแชตบันทึกตามที่ Davidice23 แจ้ง และแยกจาก GitHub PR review
 
 ## แหล่งข้อกำหนดหลัก
 
