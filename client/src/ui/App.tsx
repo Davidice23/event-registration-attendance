@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchCurrentUser, logout, type CurrentUser } from "../api/auth";
 import { isHealthResponse } from "../api/health";
 import { LoginForm } from "./LoginForm";
+import { EventWorkspace } from "./EventWorkspace";
 
 type ApiStatus = "checking" | "available" | "unavailable";
 
@@ -10,6 +11,12 @@ export function App() {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [apiStatus, setApiStatus] = useState<ApiStatus>("checking");
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [pathname, setPathname] = useState(window.location.pathname);
+
+  const navigate = (path: string) => {
+    if (window.location.pathname !== path) window.history.pushState({}, "", path);
+    setPathname(path);
+  };
 
   useEffect(() => {
     // 1. Check API health
@@ -30,12 +37,19 @@ export function App() {
     fetchCurrentUser()
       .then((user) => {
         setCurrentUser(user);
+        if (!user) navigate("/login");
+        else navigate(user.role === "ORGANIZER" ? "/organizer/events" : "/events");
       })
       .finally(() => {
         setIsLoadingAuth(false);
       });
 
-    return () => controller.abort();
+    const handlePopState = () => setPathname(window.location.pathname);
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      controller.abort();
+      window.removeEventListener("popstate", handlePopState);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -44,6 +58,7 @@ export function App() {
       await logout();
       // Only clear user state once logout has succeeded
       setCurrentUser(null);
+      navigate("/login");
     } catch (err: unknown) {
       // Do not clear user state if revocation failed on the server
       if (err instanceof Error) {
@@ -106,30 +121,19 @@ export function App() {
             Loading session…
           </div>
         ) : !currentUser ? (
-          <LoginForm onLoginSuccess={(user) => setCurrentUser(user)} />
-        ) : currentUser.role === "ORGANIZER" ? (
-          <section className="dashboard-card" aria-labelledby="organizer-heading">
-            <p className="eyebrow">Organizer Workspace</p>
-            <h1 id="organizer-heading">Welcome, {currentUser.displayName}</h1>
-            <p className="intro">
-              You are signed in as an <strong>Organizer</strong>. In the next sprint tasks, you can publish events and monitor registrations.
-            </p>
-            <div className={`api-status api-status--${apiStatus}`} role="status" aria-live="polite">
-              <span className="status-dot" aria-hidden="true" />
-              {statusText}
-            </div>
-          </section>
+          <LoginForm onLoginSuccess={(user) => {
+            setCurrentUser(user);
+            navigate(user.role === "ORGANIZER" ? "/organizer/events" : "/events");
+          }} />
+        ) : currentUser.role === "ORGANIZER" && pathname === "/organizer/events" ? (
+          <EventWorkspace user={currentUser} />
+        ) : currentUser.role === "PARTICIPANT" && pathname === "/events" ? (
+          <EventWorkspace user={currentUser} />
         ) : (
-          <section className="dashboard-card" aria-labelledby="participant-heading">
-            <p className="eyebrow">Participant Workspace</p>
-            <h1 id="participant-heading">Welcome, {currentUser.displayName}</h1>
-            <p className="intro">
-              You are signed in as a <strong>Participant</strong>. In the next sprint tasks, you can discover published workshops and manage your registrations.
-            </p>
-            <div className={`api-status api-status--${apiStatus}`} role="status" aria-live="polite">
-              <span className="status-dot" aria-hidden="true" />
-              {statusText}
-            </div>
+          <section className="dashboard-card" aria-labelledby="workspace-heading">
+            <p className="eyebrow">Workspace</p>
+            <h1 id="workspace-heading">{currentUser.displayName}</h1>
+            <p className="intro">{statusText}</p>
           </section>
         )}
       </div>

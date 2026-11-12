@@ -4,6 +4,7 @@ import { Role } from "./generated/prisma/client.js";
 import { createCsrfAndMediaGuard, createSessionMiddleware, requireAuth, requireRole } from "./auth/middleware.js";
 import { createAuthRouter } from "./auth/router.js";
 import { createPrismaClient } from "./db.js";
+import { createEventsRouter } from "./events/router.js";
 
 export interface AppOptions {
   prisma?: PrismaClient;
@@ -45,6 +46,7 @@ export function createApp(options: AppOptions = {}) {
   // Auth routes: /api/auth/login, /api/auth/me, /api/auth/logout
   if (prisma) {
     app.use("/api/auth", createAuthRouter({ prisma, secureCookies }));
+    app.use("/api", createEventsRouter(prisma));
   }
 
   // Protected route stubs for T-02 verification:
@@ -55,15 +57,6 @@ export function createApp(options: AppOptions = {}) {
       error: {
         code: "NOT_IMPLEMENTED",
         message: "Participant registrations endpoint will be implemented in F-03.",
-      },
-    });
-  });
-
-  app.get("/api/organizer/events", requireAuth, requireRole([Role.ORGANIZER]), (_req, res) => {
-    res.set("Cache-Control", "no-store").status(501).json({
-      error: {
-        code: "NOT_IMPLEMENTED",
-        message: "Organizer events endpoint will be implemented in F-02.",
       },
     });
   });
@@ -79,15 +72,6 @@ export function createApp(options: AppOptions = {}) {
 
   // Future mutating routes protected by auth & role:
   // Reject with 501 NOT_IMPLEMENTED rather than fake 201 before F-02/F-03
-  app.post("/api/events", requireAuth, requireRole([Role.ORGANIZER]), (_req, res) => {
-    res.set("Cache-Control", "no-store").status(501).json({
-      error: {
-        code: "NOT_IMPLEMENTED",
-        message: "Event publication endpoint will be implemented in F-02.",
-      },
-    });
-  });
-
   app.post("/api/events/:eventId/registrations", requireAuth, requireRole([Role.PARTICIPANT]), (_req, res) => {
     res.set("Cache-Control", "no-store").status(501).json({
       error: {

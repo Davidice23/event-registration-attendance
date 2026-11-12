@@ -349,29 +349,7 @@ describe("Sprint 1 STS — F-01 Auth & Session Lifecycle Integration Tests", () 
       }
     });
 
-    it("responds 501 NOT_IMPLEMENTED rather than 200/201 when authenticated users call unreleased feature routes", async () => {
-      // Login as Organizer
-      const orgLogin = await fetch(`${origin}/api/auth/login`, {
-        method: "POST",
-        headers: { "Origin": appOrigin, "Content-Type": "application/json" },
-        body: JSON.stringify({ email: organizerEmail, password: organizerPassword }),
-      });
-      const orgSid = parseCookies(orgLogin.headers.get("set-cookie")!)[SESSION_COOKIE_NAME];
-
-      // POST /api/events with valid auth & origin returns 501 NOT_IMPLEMENTED instead of fake 201
-      const publishRes = await fetch(`${origin}/api/events`, {
-        method: "POST",
-        headers: { "Origin": appOrigin, "Content-Type": "application/json", "Cookie": `sid=${orgSid}` },
-        body: JSON.stringify({ title: "New Workshop" }),
-      });
-      expect(publishRes.status).toBe(501);
-      expect(await publishRes.json()).toEqual({
-        error: {
-          code: "NOT_IMPLEMENTED",
-          message: "Event publication endpoint will be implemented in F-02.",
-        },
-      });
-
+    it("responds 501 NOT_IMPLEMENTED for the unreleased F-03 registration route", async () => {
       // Login as Participant
       const partLogin = await fetch(`${origin}/api/auth/login`, {
         method: "POST",
