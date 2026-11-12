@@ -1,6 +1,6 @@
 # S1-02 — Sprint 1 Feature Contracts & Software Test Specification
 
-**สถานะ:** v0.2 — ทีมยืนยันตามคำแจ้งของ Davidice23; ยังไม่มี PR review; ทุก test คือ **Planned / Not run**<br>
+**สถานะ:** v0.2 — ทีมยืนยันตามคำแจ้งของ Davidice23; เอกสารได้รับ PR review/approve จาก Khawpun124 และ merge เข้า `staging` ใน PR #1; application tests ทั้งหมด **Planned / Not run**<br>
 **ใช้คู่กับ:** [S1-01 baseline](s1-01-product-scope-and-baseline.md) และ [System-Level SDS](s1-02-system-level-sds.md)<br>
 **ขอบเขต:** สัญญาก่อน implementation; paths, API, schemas และ test IDs เป็นแบบออกแบบ ยังไม่ใช่ไฟล์หรือ endpoints ที่ใช้งานได้จริง
 
@@ -120,7 +120,7 @@ TDD ที่จะเก็บเป็นหลักฐาน: รัน T-08
 
 **ระดับ Sprint:** ทดสอบรวม, เก็บภาพการใช้งานปกติ/อ่านข้อมูลเดิม/กรณีปฏิเสธ, เก็บตัวอย่าง test จริงสำหรับกฎธุรกิจและสิทธิ์ พร้อม Issue→PR ที่เสร็จอย่างน้อยสองสาย. รวม reviewed release PR เข้า `main` และยืนยัน tag/SHA กับผลจริงบน release ก่อนใช้เป็นฐาน Lab 5. ไม่อ้างว่าอาจารย์ตรวจรับโดยไม่มีหลักฐาน
 
-**บันทึกตอนดำเนินการจริง:** `Test ID → file/test name → command or CI link → expected/actual → PASS/FAIL/SKIP → exact SHA`. ตอนร่างนี้ยังไม่มีไฟล์ test, คำสั่งรันที่ยืนยันแล้ว, PR, หรือ release SHA
+**บันทึกตอนดำเนินการจริง:** `Test ID → file/test name → command or CI link → expected/actual → PASS/FAIL/SKIP → exact SHA`. PR #1 เป็นเอกสารเท่านั้น; ตอนนี้ยังไม่มี application test files, คำสั่งทดสอบที่ยืนยันจาก scaffold จริง, implementation PR หรือ release SHA
 
 **แยกจาก Lab 5:** Sprint 1 DoD จบที่ reviewed release บน `main` พร้อม SHA/tag และหลักฐานที่ตรงกัน; ไม่รวม Docker, GCP deployment หรือการผ่าน R-01–R-12/C-01–C-06. เมื่อเริ่ม Lab 5 ให้ทำ requirement-to-evidence matrix ใน `docs/labs/lab-05/deployment.md` และรายงานแต่ละข้อจาก CI/deployed system ตาม handout; เอกสาร Sprint 1 หรือผลทดสอบ local ไม่ใช่หลักฐานว่า Lab 5 ผ่าน
 

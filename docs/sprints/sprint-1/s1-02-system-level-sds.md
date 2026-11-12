@@ -1,6 +1,6 @@
 # S1-02 — System-Level Software Design Specification
 
-**สถานะ:** v0.2 — ทีมยืนยันตามคำแจ้งของ Davidice23; ยังไม่มี PR review, implementation หรือผลทดสอบ<br>
+**สถานะ:** v0.2 — ทีมยืนยันตามคำแจ้งของ Davidice23; เอกสารได้รับ PR review/approve จาก Khawpun124 และ merge เข้า `staging` ใน PR #1; ยังไม่มี application implementation หรือผลทดสอบ<br>
 **โครงการ:** Event Registration and Attendance System (Theme 3), เวิร์กช็อปมหาวิทยาลัยที่มีที่นั่งจำกัด<br>
 **ฐานข้อกำหนด:** [S1-01 v0.1 (D-01 ถึง D-06)](s1-01-product-scope-and-baseline.md)<br>
 **สัญญาและชุดทดสอบที่วางแผน:** [Sprint 1 Feature Contracts & STS](s1-02-feature-contracts-and-sts.md)
@@ -88,6 +88,6 @@ Cloud Run + Artifact Registry + Cloud SQL for PostgreSQL + Secret Manager เป
 - **บันทึกการยืนยัน S1-02 v0.1:** Davidice23 แจ้งในแชตว่า `ทั้งคู่ยืนยัน S1-02 v0.1` สำหรับ Davidice23 และ Khawpun124 ครอบคลุม System-Level SDS และสัญญา F-01–F-04 โดยไม่ได้แจ้งข้อแก้ไข
 - **บันทึกการยืนยัน Sprint 1 v0.2:** หลังแก้ T-03/T-09 รอบล่าสุด Davidice23 แจ้งในแชตว่าทั้งคู่ยืนยัน Sprint 1 v0.2 แล้ว และอนุญาตเฉพาะ local commit นี่เป็นบันทึกตามคำแจ้งของ Davidice23 ไม่ใช่ GitHub PR review, ผลทดสอบ หรือการตรวจรับของอาจารย์
 - ตรวจความสอดคล้องของ permission matrix, DTO, วันเวลา และ capacity/duplicate precedence กับสัญญา F-01–F-04; ทีมบันทึกคำยืนยัน/ข้อแก้ไขจริงสำหรับ **S1-02** แยกจากการอนุมัติ S1-01
-- ก่อนโค้ด ให้นำเวอร์ชันเอกสารที่ทีมตรวจแล้วเข้า repository ผ่านขั้นที่ได้รับอนุญาต เพื่อมีประวัติ contract ก่อน implementation; สำหรับ Lab 5 ใช้ Sprint 1 release ที่ทดสอบและรีวิวแล้วบน `main` พร้อม tag/SHA เท่านั้น
+- **เอกสารเข้า repository แล้ว:** v0.2 ถูกรีวิวและ merge เข้า `staging` ผ่าน PR #1 เพื่อเก็บ contract history ก่อน implementation; implementation ยังต้องทำผ่าน Issue/feature branch/PR ตามลำดับ. สำหรับ Lab 5 ใช้ Sprint 1 release ที่ทดสอบและรีวิวแล้วบน `main` พร้อม tag/SHA เท่านั้น
 - **แก้ไขหลัง audit v0.2:** ทำ T-09 ให้พิสูจน์การแย่ง lock แบบกำหนดจังหวะได้, ทำ T-10 ให้มีข้อมูลของผู้ใช้ทั้งสองฝั่งและตรวจ owner scope, ขยาย negative coverage ของ auth/CSRF, ทำ DoD ให้มีคู่มือและหลักฐานที่ทำซ้ำได้, และแยก Lab 5 R/C เป็นเกณฑ์ภายหลังที่ต้องพิสูจน์จริง. การแก้เอกสารนี้ยังไม่ใช่ implementation/test evidence
 - แหล่งข้อกำหนด: Group Work Specification §6, §8; Project Deliverable 1 §§3.3, 3.5–3.6; Lab 5 updated handout §4
