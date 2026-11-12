@@ -13,13 +13,19 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
 .topbar {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: space-between;
   min-height: 4.25rem;
   padding: 0 1.5rem;
   color: #fff;
   background: #0d5f47;
   font-weight: 700;
   letter-spacing: 0.01em;
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .brand-mark {
@@ -32,16 +38,175 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
   font-size: 0.75rem;
 }
 
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.role-pill {
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 20%);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.btn-logout {
+  padding: 0.4rem 0.85rem;
+  border: 1px solid rgb(255 255 255 / 40%);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-logout:hover {
+  background: rgb(255 255 255 / 15%);
+}
+
 .page-shell { min-height: 100vh; }
 
-.welcome-card {
+.content-container {
   width: min(100% - 2rem, 52rem);
-  margin: clamp(3rem, 9vh, 6rem) auto;
+  margin: clamp(2rem, 6vh, 4rem) auto;
+}
+
+.welcome-card, .login-card, .dashboard-card {
   padding: clamp(1.5rem, 5vw, 3rem);
   border: 1px solid #cbdad1;
   border-radius: 1rem;
   background: #fff;
   box-shadow: 0 1rem 2.5rem rgb(14 66 47 / 7%);
+}
+
+.login-card {
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.login-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.6rem;
+  color: #0f4030;
+}
+
+.login-desc {
+  margin: 0 0 1.5rem;
+  color: #50655c;
+  font-size: 0.95rem;
+}
+
+.login-error {
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #f0a39e;
+  border-radius: 0.5rem;
+  background: #fdf2f2;
+  color: #991b1b;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #274c3d;
+}
+
+.form-group input {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #cbdad1;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.form-group input:focus {
+  border-color: #0d704d;
+  box-shadow: 0 0 0 3px rgb(13 112 77 / 15%);
+}
+
+.btn-primary {
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: #0d704d;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #0a563b;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.demo-accounts-hint {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px dashed #d5e3da;
+  font-size: 0.85rem;
+  color: #50655c;
+}
+
+.demo-hint-title {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.demo-hint-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-chip {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #cbdad1;
+  border-radius: 0.4rem;
+  background: #f8fbf9;
+  color: #19372e;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-chip:hover {
+  background: #e8f1ec;
+  border-color: #0d704d;
 }
 
 .eyebrow {
@@ -73,7 +238,16 @@ h1 { max-width: 34rem; margin: 0; font-size: clamp(1.8rem, 5vw, 2.6rem); line-he
 .api-status--available .status-dot { background: #168454; }
 .api-status--unavailable .status-dot { background: #c2413b; }
 
+.loading-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 12rem;
+  color: #50655c;
+  font-size: 1.1rem;
+}
+
 @media (max-width: 480px) {
   .topbar { padding-inline: 1rem; }
-  .welcome-card { width: min(100% - 1.25rem, 52rem); margin-top: 2rem; }
+  .content-container { width: min(100% - 1.25rem, 52rem); margin-top: 1.5rem; }
 }
