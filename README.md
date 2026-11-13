@@ -1,6 +1,6 @@
 # Event Registration and Attendance
 
-CPE334 Group Project — Theme 3. This repository starts with the approved Sprint 1 design baseline. The current scaffold intentionally provides a health-check UI/API and database tooling only; it does not implement login or event workflows yet.
+CPE334 Group Project — Theme 3: Event Registration and Attendance System. Sprint 1 implements authenticated Organizer and Participant workflows for publishing/discovering events, registering with duplicate/capacity protection, viewing personal registrations, and reading an owner-scoped Organizer roster. The implementation is on `staging`; it is **not yet a reviewed release on `main`**.
 
 ## Prerequisites
 
@@ -27,7 +27,7 @@ The Compose services bind only to `127.0.0.1`: development PostgreSQL uses port 
 npm run dev
 ```
 
-Open <http://127.0.0.1:5173>. The Vite server forwards `/api` to Express at `127.0.0.1:3001`; both are loopback-only in development. The landing page checks `GET /api/health` and displays the API response.
+Open <http://127.0.0.1:5173>. The Vite server forwards `/api` to Express at `127.0.0.1:3001`; both are loopback-only in development. Sign in with a seeded demo account to reach the role-specific event workspace. The health endpoint remains available at `GET /api/health`.
 
 ## Build and tests
 
@@ -51,7 +51,7 @@ npx playwright install chromium   # once; or set E2E_BROWSER_CHANNEL=chrome / ms
 npm run test:e2e
 ```
 
-The runner applies migrations to `event_registration_test`, then Playwright starts its own API on `127.0.0.1:3101` and Vite on `127.0.0.1:5174` (so a running dev server is not affected). Each test wipes the test database and inserts synthetic `example.test` users with a password generated per run. Roster steps of T-13/T-14 are marked `fixme` until F-04 lands.
+The runner applies migrations to `event_registration_test`, then Playwright starts its own API on `127.0.0.1:3101` and Vite on `127.0.0.1:5174` (so a running dev server is not affected). Each test wipes only the guarded test database and inserts synthetic `example.test` users with a password generated per run. Current browser tests include F-04 owner roster, empty roster, and access-denial flows.
 
 ## Database safety commands
 
@@ -65,4 +65,18 @@ No command in this scaffold configures GCP, billing, IAM, production secrets, or
 
 ## Current scope
 
-Included: React/Vite client, Express/TypeScript API health endpoint, Prisma/PostgreSQL schema and first migration for the approved baseline entities, isolated local/test database configuration, guarded local seed/reset commands, and reproducible workspace scripts. Authentication (F-01), event publishing (F-02) and registration with My Registrations (F-03, API and UI at `/events` and `/my/registrations`) are implemented; the organizer roster (F-04, Issue #6) is not yet.
+Included: React/Vite client, Express/TypeScript API, Prisma/PostgreSQL schema and versioned migrations, isolated local/test database configuration, guarded local seed/reset commands, and reproducible workspace scripts. Implemented Sprint 1 features are F-01 authentication, F-02 publish/discover events, F-03 registration/My Registrations, and F-04 owner-scoped Organizer roster (PRs #8–#12 into `staging`). Issues #2–#6 remain open until a reviewed release PR is merged to the default branch `main`.
+
+## Sprint 1 release-readiness status (2026-11-14)
+
+The latest `staging` merge commit is `6c2325e4370226f1f2c14358002465e9725cd818`. Integrated verification was run on commit `6b77db32506c08ec569b9ad795ca3cad9ffe5bda`; its Git tree (`37a1d25a2bbdaef7d5aa5ac0e0cc52d04308801b`) is identical to the `staging` tree. At this audit, the remote default branch `main` remained at `da04e55533bf681579d85224079aba6d8302fb6a` (`Initial commit`). Environment: Node.js 24.14.0, npm 11.9.0, PostgreSQL 18.1 in the isolated test container, and installed Microsoft Edge (`E2E_BROWSER_CHANNEL=msedge`).
+
+| Command | Result |
+|---|---|
+| `npm test` | Passed: safety 6/6, client 21/21, server 39/39 |
+| `npm run test:integration` | Passed: 27/27 against loopback `event_registration_test` on port 5434 |
+| `npm run test:e2e` | Passed: 8/8, including F-04 roster and authorization flows |
+| `npm run build` | Passed: client TypeScript/Vite and server TypeScript builds |
+| `npm run db:validate` | Passed: Prisma schema valid |
+
+These are local results; no PR-triggered GitHub Actions run was returned for the tested commit. The release PR to `main`, a release tag/SHA, and manual screenshot evidence are still pending. No instructor acceptance is claimed. Do not treat these local tests as Lab 5 Docker/CI/CD/deployment evidence.
