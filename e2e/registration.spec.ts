@@ -1,4 +1,4 @@
-import { expect, test, type Request } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import {
   closePool, countRegistrations, createEvent, eventCard, eventIdByTitle, insertRegistration,
   resetDatabase, signIn, signOut,
@@ -45,17 +45,36 @@ test("T-13 (F-03 part): organizer publishes, participant registers and reads it 
   const card = eventCard(page, title);
   await expect(card.getByRole("button", { name: "สมัคร", exact: true })).toBeEnabled();
 
-  const apiCalls: string[] = [];
-  const track = (request: Request) => {
-    if (request.method() === "POST" && REGISTER_POST.test(request.url())) apiCalls.push("POST");
-    if (request.method() === "GET" && MY_REGISTRATIONS_GET.test(request.url())) apiCalls.push("GET my");
-  };
-  page.on("requestfinished", track);
+  // Success must appear only after the POST answered AND /my/registrations was re-read.
+  // Hold the first list read that starts after the POST answer and check nothing claims success meanwhile.
+  let posts = 0;
+  let postAnswered = false;
+  let release!: () => void;
+  const released = new Promise<void>(resolve => { release = resolve; });
+  let heldReadArrived!: () => void;
+  const heldRead = new Promise<void>(resolve => { heldReadArrived = resolve; });
+  await page.route(REGISTER_POST, async route => {
+    posts += 1;
+    const response = await route.fetch();
+    postAnswered = true;
+    await route.fulfill({ response });
+  });
+  await page.route(MY_REGISTRATIONS_GET, async route => {
+    if (postAnswered) {
+      heldReadArrived();
+      await released;
+    }
+    await route.continue();
+  });
+  const successText = page.getByText(`สมัครกิจกรรม “${title}” สำเร็จแล้ว`);
   await card.getByRole("button", { name: "สมัคร", exact: true }).click();
-  await expect(page.getByText(`สมัครกิจกรรม “${title}” สำเร็จแล้ว`)).toBeVisible();
-  page.off("requestfinished", track);
-  // Success is shown only after the POST answered AND /my/registrations was re-read.
-  expect(apiCalls).toEqual(["POST", "GET my"]);
+  await heldRead;
+  await page.waitForTimeout(300);
+  await expect(successText).toHaveCount(0);
+  release();
+  await expect(successText).toBeVisible();
+  expect(posts).toBe(1);
+  await page.unrouteAll({ behavior: "wait" });
   await expect(card.getByRole("button", { name: "สมัครแล้ว" })).toBeDisabled();
   expect(await countRegistrations(eventId, users.participantA)).toBe(1);
 
