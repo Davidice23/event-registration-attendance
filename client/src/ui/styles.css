@@ -276,6 +276,21 @@ h1 { max-width: 34rem; margin: 0; font-size: clamp(1.8rem, 5vw, 2.6rem); line-he
   font-size: 1.1rem;
 }
 
+.event-form { display: grid; gap: 1rem; margin: 2rem 0; padding: 1.25rem; border: 1px solid #d5e3da; border-radius: 0.75rem; background: #f8fbf9; }
+.event-form h2 { margin: 0; color: #0f4030; }
+.event-form label { display: grid; gap: 0.4rem; color: #274c3d; font-size: 0.9rem; font-weight: 600; }
+.event-form input, .event-form textarea { width: 100%; padding: 0.7rem 0.85rem; border: 1px solid #cbdad1; border-radius: 0.5rem; background: #fff; color: #19372e; font: inherit; }
+.event-form input:focus, .event-form textarea:focus { outline: 2px solid #168454; outline-offset: 1px; }
+.event-notice { padding: 0.75rem 1rem; border-radius: 0.5rem; background: #e7f4ec; color: #14532d; }
+.event-list { display: grid; gap: 1rem; margin-top: 1.5rem; }
+.event-card { padding: 1.25rem; border: 1px solid #cbdad1; border-radius: 0.75rem; background: #fff; }
+.event-card h2 { margin: 0 0 0.5rem; color: #0f4030; font-size: 1.25rem; }
+.event-card p { color: #50655c; white-space: pre-wrap; }
+.event-card dl { display: grid; gap: 0.5rem; margin: 1rem 0 0; }
+.event-card dl div { display: flex; gap: 0.5rem; }
+.event-card dt { min-width: 8rem; color: #50655c; font-weight: 600; }
+.event-card dd { margin: 0; }
+
 @media (max-width: 480px) {
   .topbar { padding-inline: 1rem; }
   .content-container { width: min(100% - 1.25rem, 52rem); margin-top: 1.5rem; }
