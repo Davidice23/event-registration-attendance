@@ -6,7 +6,7 @@ import { formatBangkokDate } from "./format";
 
 interface Props { user: CurrentUser; }
 
-type Feedback = { tone: "success" | "info" | "error"; text: string };
+type Feedback = { tone: "success" | "info" | "warning" | "error"; text: string };
 
 export function EventWorkspace({ user }: Props) {
   const organizer = user.role === "ORGANIZER";
@@ -96,9 +96,10 @@ export function EventWorkspace({ user }: Props) {
       await registerForEvent(item.id);
       // Show success only after the API answered and the participant's own list was re-read.
       const mine = await loadMine();
+      // Without a successful re-read the registration is not confirmed, so do not show success.
       setFeedback(mine
         ? { tone: "success", text: `สมัครกิจกรรม “${item.title}” สำเร็จแล้ว` }
-        : { tone: "success", text: `สมัครกิจกรรม “${item.title}” สำเร็จแล้ว แต่โหลดรายการของฉันไม่สำเร็จ กรุณากด “ตรวจรายการของฉัน”` });
+        : { tone: "warning", text: "สมัครแล้วแต่ยังยืนยันรายการไม่ได้—กรุณาตรวจรายการของฉัน" });
     } catch (cause) {
       const outcome = classifyRegisterError(cause);
       switch (outcome.kind) {
@@ -170,6 +171,8 @@ export function EventWorkspace({ user }: Props) {
       {error && <p role="alert" className="login-error">{error}</p>}
       {feedback && (feedback.tone === "error"
         ? <p role="alert" className="login-error registration-feedback">{feedback.text}</p>
+        : feedback.tone === "warning"
+        ? <p role="alert" className="registration-feedback registration-feedback-warning">{feedback.text}</p>
         : <p role="status" className={`event-notice registration-feedback registration-feedback-${feedback.tone}`}>{feedback.text}</p>)}
       {!organizer && myRegistrationsFailed && (
         <div className="registration-check" role="alert">

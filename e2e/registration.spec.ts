@@ -180,3 +180,44 @@ test("F-03 UI: request failed before commit — checks own list, says it is not 
   expect(posts).toBe(1);
   expect(await countRegistrations(eventId, users.participantA)).toBe(0);
 });
+
+test("F-03 UI: POST succeeds but the follow-up My Registrations read fails — no confirmed success is claimed", async ({ page }) => {
+  const title = "E2E Unconfirmed Read";
+  const eventId = await createEvent(users.organizerA, title, 3);
+  await signIn(page, "participantA");
+
+  let posts = 0;
+  let postAnswered = false;
+  let failedReads = 0;
+  await page.route(REGISTER_POST, async route => {
+    posts += 1;
+    const response = await route.fetch();
+    postAnswered = true;
+    await route.fulfill({ response });
+  });
+  await page.route(MY_REGISTRATIONS_GET, async route => {
+    if (postAnswered && failedReads === 0) {
+      failedReads += 1;
+      await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: { code: "TEMPORARILY_UNAVAILABLE", message: "x" } }) });
+      return;
+    }
+    await route.continue();
+  });
+
+  const card = eventCard(page, title);
+  await card.getByRole("button", { name: "สมัคร", exact: true }).click();
+  await expect(page.getByText("สมัครแล้วแต่ยังยืนยันรายการไม่ได้—กรุณาตรวจรายการของฉัน")).toBeVisible();
+  // Not presented as a confirmed success.
+  await expect(page.locator(".registration-feedback")).not.toHaveClass(/registration-feedback-success/);
+  await expect(page.getByText(`สมัครกิจกรรม “${title}” สำเร็จแล้ว`)).toHaveCount(0);
+  // Registering stays blocked until the participant re-checks their own list.
+  await expect(card.getByRole("button")).toBeDisabled();
+  expect(failedReads).toBe(1);
+  expect(posts).toBe(1);
+  expect(await countRegistrations(eventId, users.participantA)).toBe(1);
+
+  await page.getByRole("button", { name: "ตรวจรายการของฉัน" }).click();
+  await expect(card.getByRole("button", { name: "สมัครแล้ว" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "ตรวจรายการของฉัน" })).toHaveCount(0);
+  expect(posts).toBe(1);
+});
