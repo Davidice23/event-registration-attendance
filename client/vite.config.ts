@@ -9,7 +9,8 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:3001",
+        // Browser E2E runs its own API on a separate port (see playwright.config.ts).
+        target: process.env.API_PROXY_TARGET ?? "http://127.0.0.1:3001",
         changeOrigin: false,
       },
     },

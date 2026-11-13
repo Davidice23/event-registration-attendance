@@ -44,6 +44,15 @@ npm run test:integration
 
 It validates the `TEST_DATABASE_URL`, applies checked-in migrations to that dedicated local test database, then checks Prisma connectivity. It will fail closed if the test URL is missing, remote, not exactly the expected test database, or equal to `DATABASE_URL`.
 
+Browser E2E tests (Playwright, `e2e/`) use the same guarded test database:
+
+```powershell
+npx playwright install chromium   # once; or set E2E_BROWSER_CHANNEL=chrome / msedge to use an installed browser
+npm run test:e2e
+```
+
+The runner applies migrations to `event_registration_test`, then Playwright starts its own API on `127.0.0.1:3101` and Vite on `127.0.0.1:5174` (so a running dev server is not affected). Each test wipes the test database and inserts synthetic `example.test` users with a password generated per run. Roster steps of T-13/T-14 are marked `fixme` until F-04 lands.
+
 ## Database safety commands
 
 - `npm run db:validate` validates the checked-in Prisma schema without connecting to a database.
@@ -56,4 +65,4 @@ No command in this scaffold configures GCP, billing, IAM, production secrets, or
 
 ## Current scope
 
-Included: React/Vite client, Express/TypeScript API health endpoint, Prisma/PostgreSQL schema and first migration for the approved baseline entities, isolated local/test database configuration, guarded local seed/reset commands, and reproducible workspace scripts. Product endpoints, authentication, event publishing, registration, and organizer roster are deliberately deferred to Issues #3–#6.
+Included: React/Vite client, Express/TypeScript API health endpoint, Prisma/PostgreSQL schema and first migration for the approved baseline entities, isolated local/test database configuration, guarded local seed/reset commands, and reproducible workspace scripts. Authentication (F-01), event publishing (F-02) and registration with My Registrations (F-03, API and UI at `/events` and `/my/registrations`) are implemented; the organizer roster (F-04, Issue #6) is not yet.

@@ -20,6 +20,7 @@
     "test": "npm run db:generate && npm run test:safety && npm run test --workspaces",
     "test:safety": "node --test scripts/safety.test.mjs",
     "test:integration": "npm run db:generate && node scripts/run-integration-tests.mjs",
+    "test:e2e": "npm run db:generate && node scripts/run-e2e-tests.mjs",
     "db:generate": "node scripts/prisma-local.mjs generate",
     "db:validate": "node scripts/prisma-local.mjs validate",
     "db:migrate": "node scripts/db-command.mjs dev migrate deploy",
@@ -28,6 +29,7 @@
     "db:seed": "tsx scripts/seed-local.ts"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.0",
     "dotenv": "17.4.2",
     "prisma": "7.10.1",
     "tsx": "4.20.6"
