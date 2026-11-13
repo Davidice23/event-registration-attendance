@@ -1,7 +1,6 @@
 import express, { type Request, type Response, type NextFunction } from "express";
 import type { PrismaClient } from "./generated/prisma/client.js";
-import { Role } from "./generated/prisma/client.js";
-import { createCsrfAndMediaGuard, createSessionMiddleware, requireAuth, requireRole } from "./auth/middleware.js";
+import { createCsrfAndMediaGuard, createSessionMiddleware } from "./auth/middleware.js";
 import { createAuthRouter } from "./auth/router.js";
 import { createPrismaClient } from "./db.js";
 import { createEventsRouter } from "./events/router.js";
@@ -50,18 +49,6 @@ export function createApp(options: AppOptions = {}) {
     app.use("/api", createEventsRouter(prisma));
     app.use("/api", createRegistrationsRouter(prisma));
   }
-
-  // Protected route stubs for T-02 verification:
-  // Anonymous callers receive 401 UNAUTHENTICATED.
-  // Authorized callers receive 501 NOT_IMPLEMENTED until F-04 is implemented.
-  app.get("/api/organizer/events/:eventId/registrations", requireAuth, requireRole([Role.ORGANIZER]), (_req, res) => {
-    res.set("Cache-Control", "no-store").status(501).json({
-      error: {
-        code: "NOT_IMPLEMENTED",
-        message: "Organizer event registrations endpoint will be implemented in F-04.",
-      },
-    });
-  });
 
   // Catch-all 404 handler for unknown routes
   app.use((_req: Request, res: Response) => {

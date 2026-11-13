@@ -5,8 +5,7 @@ import {
 } from "./fixtures";
 
 /**
- * Browser E2E for F-03 (contract §4) — T-13 / T-14 from the Sprint 1 STS.
- * Roster steps depend on F-04 (Issue #6) and are recorded as `test.fixme` until that lands.
+ * Browser E2E for F-03/F-04 (contract §§4–5) — T-13 / T-14 from the Sprint 1 STS.
  */
 
 const REGISTER_POST = /\/api\/events\/[0-9a-f-]{36}\/registrations$/;
@@ -22,7 +21,7 @@ test.afterAll(async () => {
   await closePool();
 });
 
-test("T-13 (F-03 part): organizer publishes, participant registers and reads it back after refresh, logout locks the page", async ({ page }) => {
+test("T-13 / AC-11: organizer publishes, participant registers, and organizer later reads the roster", async ({ page }) => {
   const title = "E2E Journey Workshop";
 
   // Organizer A publishes through the UI.
@@ -95,9 +94,17 @@ test("T-13 (F-03 part): organizer publishes, participant registers and reads it 
   await expect(page.getByRole("heading", { name: "Sign In" })).toBeVisible();
   await expect(page.getByRole("list", { name: "รายการที่สมัคร" })).toHaveCount(0);
   expect((await page.request.get("/api/my/registrations")).status()).toBe(401);
-});
 
-test.fixme("T-13 (F-04 part): Organizer A signs in again and opens the roster — pending F-04 (Issue #6)", async () => {});
+  // The organizer can later return and read only the event's persisted roster.
+  await signIn(page, "organizerA");
+  await expect(page).toHaveURL(/\/organizer\/events$/);
+  await eventCard(page, title).getByRole("button", { name: "ดูรายชื่อผู้ลงทะเบียน" }).click();
+  await expect(page).toHaveURL(new RegExp(`/organizer/events/${eventId}/registrations$`));
+  const roster = page.getByRole("list", { name: "รายชื่อผู้ลงทะเบียน" });
+  await expect(roster.getByRole("listitem")).toHaveCount(1);
+  await expect(roster).toContainText("Participant A");
+  await expect(roster.locator("time")).toHaveAttribute("datetime", /Z$/);
+});
 
 test("T-14 (F-03 part): registering the same event again shows the duplicate reason and adds no row", async ({ page, context }) => {
   const title = "E2E Duplicate Seminar";
@@ -124,7 +131,34 @@ test("T-14 (F-03 part): registering the same event again shows the duplicate rea
   await expect(page.getByRole("list", { name: "รายการที่สมัคร" }).getByRole("listitem")).toHaveCount(1);
 });
 
-test.fixme("T-14 (F-04 part): a participant opening an organizer roster URL sees no roster — pending F-04 (Issue #6)", async () => {});
+test("T-14 / AC-12: a Participant cannot read or open an organizer roster", async ({ page }) => {
+  const title = "E2E Private Organizer Roster";
+  const eventId = await createEvent(users.organizerA, title, 3);
+  await insertRegistration(eventId, users.participantA);
+  await signIn(page, "participantA");
+
+  const response = await page.request.get(`/api/organizer/events/${eventId}/registrations`);
+  expect(response.status()).toBe(403);
+  expect(await response.text()).not.toContain("Participant A");
+
+  await page.goto(`/organizer/events/${eventId}/registrations`);
+  await expect(page).toHaveURL(/\/events$/);
+  await expect(page.getByRole("list", { name: "รายชื่อผู้ลงทะเบียน" })).toHaveCount(0);
+  await expect(page.locator(".roster-entry")).toHaveCount(0);
+});
+
+test("F-04 UI: an empty roster is distinct from an event that is missing or not owned", async ({ page }) => {
+  const eventId = await createEvent(users.organizerA, "E2E Empty Organizer Roster", 2);
+  await signIn(page, "organizerA");
+
+  await page.goto(`/organizer/events/${eventId}/registrations`);
+  await expect(page.getByRole("status")).toHaveText("ยังไม่มีผู้ลงทะเบียนในกิจกรรมนี้");
+  await expect(page.getByRole("list", { name: "รายชื่อผู้ลงทะเบียน" })).toHaveCount(0);
+
+  await page.goto("/organizer/events/9f1c2d3e-4b5a-4c6d-8e7f-0a1b2c3d4e5f/registrations");
+  await expect(page.getByRole("alert")).toHaveText("ไม่พบกิจกรรมนี้ หรือคุณไม่มีสิทธิ์ดูรายชื่อผู้ลงทะเบียน");
+  await expect(page.getByRole("status")).toHaveCount(0);
+});
 
 test("F-03 UI: a full event shows EVENT_FULL, distinct from the duplicate message, and adds no row", async ({ page }) => {
   const title = "E2E Full Lab";

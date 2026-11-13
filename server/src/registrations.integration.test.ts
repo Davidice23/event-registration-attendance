@@ -298,6 +298,9 @@ describe("Sprint 1 F-03 — Register & My Registrations (PostgreSQL)", () => {
       expect(data).toEqual([before]);
       const events = await (await fetch(`${restarted.origin}/api/events`, { headers: { Cookie: cookieA } })).json();
       expect(events.data.map((e: { id: string }) => e.id)).toContain(event.id);
+      const roster = await fetch(`${restarted.origin}/api/organizer/events/${event.id}/registrations`, { headers: { Cookie: cookieOrganizer } });
+      expect(roster.status).toBe(200);
+      expect(await roster.json()).toEqual({ data: [{ registrationId: before.id, participantDisplayName: "Participant A", registeredAt: before.registeredAt }] });
     } finally {
       await restarted.close();
     }

@@ -4,8 +4,10 @@ import { isHealthResponse } from "../api/health";
 import { LoginForm } from "./LoginForm";
 import { EventWorkspace } from "./EventWorkspace";
 import { MyRegistrations } from "./MyRegistrations";
+import { OrganizerRoster } from "./OrganizerRoster";
 
 type ApiStatus = "checking" | "available" | "unavailable";
+const ORGANIZER_ROSTER_PATH = /^\/organizer\/events\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/registrations$/i;
 
 const ROLE_PATHS: Record<Role, string[]> = {
   ORGANIZER: ["/organizer/events"],
@@ -14,6 +16,11 @@ const ROLE_PATHS: Record<Role, string[]> = {
 
 function defaultPath(user: CurrentUser): string {
   return ROLE_PATHS[user.role][0];
+}
+
+function canOpenPath(user: CurrentUser, path: string): boolean {
+  if (user.role === "ORGANIZER" && ORGANIZER_ROSTER_PATH.test(path)) return true;
+  return ROLE_PATHS[user.role].includes(path);
 }
 
 export function App() {
@@ -49,7 +56,7 @@ export function App() {
         setCurrentUser(user);
         if (!user) navigate("/login");
         // Keep the current page on reload when the role may see it (e.g. /my/registrations).
-        else if (!ROLE_PATHS[user.role].includes(window.location.pathname)) navigate(defaultPath(user));
+        else if (!canOpenPath(user, window.location.pathname)) navigate(defaultPath(user));
       })
       .finally(() => {
         setIsLoadingAuth(false);
@@ -93,6 +100,12 @@ export function App() {
           <span className="brand-mark" aria-hidden="true">ER</span>
           <span>Event Registration</span>
         </div>
+
+        {currentUser?.role === "ORGANIZER" && (
+          <nav className="main-nav" aria-label="Organizer">
+            <a href="/organizer/events" aria-current={pathname === "/organizer/events" || ORGANIZER_ROSTER_PATH.test(pathname) ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigate("/organizer/events"); }}>กิจกรรมของฉัน</a>
+          </nav>
+        )}
 
         {currentUser?.role === "PARTICIPANT" && (
           <nav className="main-nav" aria-label="Participant">
@@ -152,7 +165,9 @@ export function App() {
             navigate(defaultPath(user));
           }} />
         ) : currentUser.role === "ORGANIZER" && pathname === "/organizer/events" ? (
-          <EventWorkspace user={currentUser} />
+          <EventWorkspace user={currentUser} onViewRoster={(eventId) => navigate(`/organizer/events/${eventId}/registrations`)} />
+        ) : currentUser.role === "ORGANIZER" && ORGANIZER_ROSTER_PATH.test(pathname) ? (
+          <OrganizerRoster eventId={pathname.match(ORGANIZER_ROSTER_PATH)![1]} onBack={() => navigate("/organizer/events")} />
         ) : currentUser.role === "PARTICIPANT" && pathname === "/events" ? (
           <EventWorkspace key="events" user={currentUser} />
         ) : currentUser.role === "PARTICIPANT" && pathname === "/my/registrations" ? (

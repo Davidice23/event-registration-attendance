@@ -4,11 +4,11 @@ import { classifyRegisterError, getMyRegistrations, registerForEvent, type MyReg
 import type { CurrentUser } from "../api/auth";
 import { formatBangkokDate } from "./format";
 
-interface Props { user: CurrentUser; }
+interface Props { user: CurrentUser; onViewRoster?: (eventId: string) => void; }
 
 type Feedback = { tone: "success" | "info" | "warning" | "error"; text: string };
 
-export function EventWorkspace({ user }: Props) {
+export function EventWorkspace({ user, onViewRoster }: Props) {
   const organizer = user.role === "ORGANIZER";
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [title, setTitle] = useState("");
@@ -187,6 +187,7 @@ export function EventWorkspace({ user }: Props) {
             <div><dt>สถานที่</dt><dd>{item.location}</dd></div>
             <div><dt>จำนวนที่นั่ง</dt><dd>{item.capacity}</dd></div>
           </dl>
+          {organizer && <button type="button" className="btn-secondary btn-roster" onClick={() => onViewRoster?.(item.id)}>ดูรายชื่อผู้ลงทะเบียน</button>}
           {!organizer && registerButton(item)}
         </article>)}
       </div>
