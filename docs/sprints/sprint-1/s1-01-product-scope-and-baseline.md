@@ -1,10 +1,10 @@
 # S1-01: Define Theme 3 product scope and Sprint 1 baseline
 
-สถานะ: **ทีมยืนยัน Sprint 1 v0.2 ตามคำแจ้งของ Davidice23; เอกสารผ่าน PR #1 ที่ Khawpun124 approve และ merge เข้า `staging`; ขอบเขต D-01 ถึง D-06 ไม่เปลี่ยน; ยังไม่มี application implementation หรือผลทดสอบ**<br>
+สถานะ ณ 14 พ.ย. 2026: **ทีมยืนยัน Sprint 1 v0.2 ตามคำแจ้งของ Davidice23; เอกสารผ่าน PR #1; implementation F-01–F-04 ผ่าน PR #8–#12 เข้า `staging`; integrated local verification ผ่านบน tree ปัจจุบัน; ขอบเขต D-01–D-06 ไม่เปลี่ยน; ยังไม่มี reviewed release บน `main`**<br>
 โครงการ: Event Registration and Attendance System (Theme 3)<br>
 GitHub: [Davidice23/event-registration-attendance](https://github.com/Davidice23/event-registration-attendance)<br>
 กำหนดส่งรอบนี้: 15 พฤศจิกายน 2026 ตามที่ผู้ใช้ยืนยัน (Lab 5 ระบุ 23:59; เวลาของ Deliverable 1 ให้ยึดประกาศเลื่อนจริง)<br>
-ขอบเขตเอกสาร: ร่าง Product Scope, SRS เบื้องต้น, Feature Inventory, Traceability และแผนสาม Sprint; ไม่ใช่ System-Level SDS หรือ feature contracts ฉบับสมบูรณ์ และไม่ใช่หลักฐานการรีวิวหรือ release
+ขอบเขตเอกสาร: Product Scope, SRS เบื้องต้น, Feature Inventory, Traceability และแผนสาม Sprint; ไม่ใช่ System-Level SDS หรือ feature contracts ฉบับสมบูรณ์. การ review ของเอกสารมีหลักฐานใน PR #1; เอกสารนี้ไม่ใช่หลักฐานการตรวจรับจากอาจารย์หรือ release บน `main`.
 
 ## 1. ปัญหาและบริบทที่เสนอ
 

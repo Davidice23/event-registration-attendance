@@ -1,8 +1,8 @@
 # S1-02 — Sprint 1 Feature Contracts & Software Test Specification
 
-**สถานะ:** v0.2 — ทีมยืนยันตามคำแจ้งของ Davidice23; เอกสารได้รับ PR review/approve จาก Khawpun124 และ merge เข้า `staging` ใน PR #1; application tests ทั้งหมด **Planned / Not run**<br>
+**สถานะ ณ 14 พ.ย. 2026:** v0.2 — ทีมยืนยันตามคำแจ้งของ Davidice23; เอกสารผ่าน PR #1; F-01–F-04 implement และ merge เข้า `staging` ผ่าน PR #8–#12; integrated local verification ล่าสุดผ่านบน tree ของ `staging`. ยังไม่มี reviewed release บน `main` หรือผล CI สำหรับ SHA ที่ทดสอบ; ดูรายละเอียดใน §7 และ [Sprint 1 index](README.md)<br>
 **ใช้คู่กับ:** [S1-01 baseline](s1-01-product-scope-and-baseline.md) และ [System-Level SDS](s1-02-system-level-sds.md)<br>
-**ขอบเขต:** สัญญาก่อน implementation; paths, API, schemas และ test IDs เป็นแบบออกแบบ ยังไม่ใช่ไฟล์หรือ endpoints ที่ใช้งานได้จริง
+**ขอบเขต:** เอกสารนี้เป็นสัญญาและ expected behavior สำหรับ implementation; ใช้ test IDs เดิมเทียบกับ test files/results จริงด้านล่างและใน PR ที่เกี่ยวข้อง
 
 ## 1. ข้อตกลงร่วม
 
@@ -86,7 +86,7 @@
 
 ## 6. Software Test Specification (STS)
 
-ทดสอบด้วยบัญชี Organizer A/B และ Participant A/B คนละ session; API/DB และ E2E ใช้ PostgreSQL ทดสอบจริงที่แยกไว้ ไม่ mock ฐานข้อมูลเป็นหลักฐาน persistence. ทุกแถวด้านล่าง **ยังไม่รัน**. ใช้รหัสเดิมเมื่อบันทึกผลจริงใน PR/Part F
+ทดสอบด้วยบัญชี Organizer A/B และ Participant A/B คนละ session; API/DB และ E2E ใช้ PostgreSQL ทดสอบจริงที่แยกไว้ ไม่ mock ฐานข้อมูลเป็นหลักฐาน persistence. ตารางนี้ระบุขั้นตอน/ผลที่คาด; ผลรันล่าสุดและขอบเขตที่ยังค้างบันทึกไว้ใน §7
 
 | Test ID | ระดับ / AC | ข้อมูลก่อนทดสอบและการกระทำ | ผลที่คาด |
 |---|---|---|---|
@@ -120,7 +120,21 @@ TDD ที่จะเก็บเป็นหลักฐาน: รัน T-08
 
 **ระดับ Sprint:** ทดสอบรวม, เก็บภาพการใช้งานปกติ/อ่านข้อมูลเดิม/กรณีปฏิเสธ, เก็บตัวอย่าง test จริงสำหรับกฎธุรกิจและสิทธิ์ พร้อม Issue→PR ที่เสร็จอย่างน้อยสองสาย. รวม reviewed release PR เข้า `main` และยืนยัน tag/SHA กับผลจริงบน release ก่อนใช้เป็นฐาน Lab 5. ไม่อ้างว่าอาจารย์ตรวจรับโดยไม่มีหลักฐาน
 
-**บันทึกตอนดำเนินการจริง:** `Test ID → file/test name → command or CI link → expected/actual → PASS/FAIL/SKIP → exact SHA`. PR #1 เป็นเอกสารเท่านั้น; ตอนนี้ยังไม่มี application test files, คำสั่งทดสอบที่ยืนยันจาก scaffold จริง, implementation PR หรือ release SHA
+### 7.1 Integrated execution record (2026-11-14)
+
+ทดสอบบน commit `6b77db32506c08ec569b9ad795ca3cad9ffe5bda`; `staging` อยู่ที่ merge commit `6c2325e4370226f1f2c14358002465e9725cd818` และมี tree เดียวกัน `37a1d25a2bbdaef7d5aa5ac0e0cc52d04308801b`. Environment: Node.js 24.14.0, npm 11.9.0, PostgreSQL 18.1 ใน dedicated local test container, Microsoft Edge (`E2E_BROWSER_CHANNEL=msedge`). Integration/E2E ใช้เฉพาะ loopback test database `event_registration_test` บน port 5434; ไม่ใช้ dev/production DB.
+
+| Command | Coverage / observed result | Status |
+|---|---|---|
+| `npm test` | Safety 6/6; client 21/21 (4 files); server 39/39 (8 files) | PASS |
+| `npm run test:integration` | PostgreSQL-backed integration suite, 27/27 (4 files); migrations applied to isolated test DB | PASS |
+| `npm run test:e2e` | 8/8, zero skipped; includes T-13/T-14 registration, owner roster, empty roster, and denied-access flows | PASS |
+| `npm run build` | Client TypeScript/Vite and server TypeScript builds | PASS |
+| `npm run db:validate` | Prisma schema validation | PASS |
+
+These are local command results, not GitHub Actions results. No PR-triggered GitHub Actions run was returned for the tested commit. The run record is aggregate; preserve the per-test ID → file/test name mapping in the feature PR descriptions and attach the required human screenshots/checklist before release. No screenshot/manual visual review is claimed in this record.
+
+**บันทึกตอนดำเนินการจริง:** `Test ID → file/test name → command or CI link → expected/actual → PASS/FAIL/SKIP → exact SHA`. Feature implementation/review evidence: [PR #8](https://github.com/Davidice23/event-registration-attendance/pull/8)–[#12](https://github.com/Davidice23/event-registration-attendance/pull/12); consolidated GitHub review status is in [Sprint 1 index](README.md). Issues #2–#6 remain open because their PRs merged into `staging`; close references belong on the eventual release PR to `main`. There is no release SHA/tag yet.
 
 **แยกจาก Lab 5:** Sprint 1 DoD จบที่ reviewed release บน `main` พร้อม SHA/tag และหลักฐานที่ตรงกัน; ไม่รวม Docker, GCP deployment หรือการผ่าน R-01–R-12/C-01–C-06. เมื่อเริ่ม Lab 5 ให้ทำ requirement-to-evidence matrix ใน `docs/labs/lab-05/deployment.md` และรายงานแต่ละข้อจาก CI/deployed system ตาม handout; เอกสาร Sprint 1 หรือผลทดสอบ local ไม่ใช่หลักฐานว่า Lab 5 ผ่าน
 
