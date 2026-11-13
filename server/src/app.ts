@@ -5,6 +5,7 @@ import { createCsrfAndMediaGuard, createSessionMiddleware, requireAuth, requireR
 import { createAuthRouter } from "./auth/router.js";
 import { createPrismaClient } from "./db.js";
 import { createEventsRouter } from "./events/router.js";
+import { createRegistrationsRouter } from "./registrations/router.js";
 
 export interface AppOptions {
   prisma?: PrismaClient;
@@ -47,36 +48,17 @@ export function createApp(options: AppOptions = {}) {
   if (prisma) {
     app.use("/api/auth", createAuthRouter({ prisma, secureCookies }));
     app.use("/api", createEventsRouter(prisma));
+    app.use("/api", createRegistrationsRouter(prisma));
   }
 
   // Protected route stubs for T-02 verification:
   // Anonymous callers receive 401 UNAUTHENTICATED.
-  // Authorized callers receive 501 NOT_IMPLEMENTED until F-02/F-03/F-04 are implemented.
-  app.get("/api/my/registrations", requireAuth, requireRole([Role.PARTICIPANT]), (_req, res) => {
-    res.set("Cache-Control", "no-store").status(501).json({
-      error: {
-        code: "NOT_IMPLEMENTED",
-        message: "Participant registrations endpoint will be implemented in F-03.",
-      },
-    });
-  });
-
+  // Authorized callers receive 501 NOT_IMPLEMENTED until F-04 is implemented.
   app.get("/api/organizer/events/:eventId/registrations", requireAuth, requireRole([Role.ORGANIZER]), (_req, res) => {
     res.set("Cache-Control", "no-store").status(501).json({
       error: {
         code: "NOT_IMPLEMENTED",
         message: "Organizer event registrations endpoint will be implemented in F-04.",
-      },
-    });
-  });
-
-  // Future mutating routes protected by auth & role:
-  // Reject with 501 NOT_IMPLEMENTED rather than fake 201 before F-02/F-03
-  app.post("/api/events/:eventId/registrations", requireAuth, requireRole([Role.PARTICIPANT]), (_req, res) => {
-    res.set("Cache-Control", "no-store").status(501).json({
-      error: {
-        code: "NOT_IMPLEMENTED",
-        message: "Event registration endpoint will be implemented in F-03.",
       },
     });
   });

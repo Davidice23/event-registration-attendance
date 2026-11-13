@@ -1,10 +1,20 @@
 import { useEffect, useState } from "react";
-import { fetchCurrentUser, logout, type CurrentUser } from "../api/auth";
+import { fetchCurrentUser, logout, type CurrentUser, type Role } from "../api/auth";
 import { isHealthResponse } from "../api/health";
 import { LoginForm } from "./LoginForm";
 import { EventWorkspace } from "./EventWorkspace";
+import { MyRegistrations } from "./MyRegistrations";
 
 type ApiStatus = "checking" | "available" | "unavailable";
+
+const ROLE_PATHS: Record<Role, string[]> = {
+  ORGANIZER: ["/organizer/events"],
+  PARTICIPANT: ["/events", "/my/registrations"],
+};
+
+function defaultPath(user: CurrentUser): string {
+  return ROLE_PATHS[user.role][0];
+}
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -38,7 +48,8 @@ export function App() {
       .then((user) => {
         setCurrentUser(user);
         if (!user) navigate("/login");
-        else navigate(user.role === "ORGANIZER" ? "/organizer/events" : "/events");
+        // Keep the current page on reload when the role may see it (e.g. /my/registrations).
+        else if (!ROLE_PATHS[user.role].includes(window.location.pathname)) navigate(defaultPath(user));
       })
       .finally(() => {
         setIsLoadingAuth(false);
@@ -83,6 +94,21 @@ export function App() {
           <span>Event Registration</span>
         </div>
 
+        {currentUser?.role === "PARTICIPANT" && (
+          <nav className="main-nav" aria-label="Participant">
+            {[["/events", "กิจกรรม"], ["/my/registrations", "รายการของฉัน"]].map(([path, label]) => (
+              <a
+                key={path}
+                href={path}
+                aria-current={pathname === path ? "page" : undefined}
+                onClick={(event) => { event.preventDefault(); navigate(path); }}
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+        )}
+
         {currentUser && (
           <div className="user-section">
             <span className="user-badge">
@@ -123,12 +149,14 @@ export function App() {
         ) : !currentUser ? (
           <LoginForm onLoginSuccess={(user) => {
             setCurrentUser(user);
-            navigate(user.role === "ORGANIZER" ? "/organizer/events" : "/events");
+            navigate(defaultPath(user));
           }} />
         ) : currentUser.role === "ORGANIZER" && pathname === "/organizer/events" ? (
           <EventWorkspace user={currentUser} />
         ) : currentUser.role === "PARTICIPANT" && pathname === "/events" ? (
-          <EventWorkspace user={currentUser} />
+          <EventWorkspace key="events" user={currentUser} />
+        ) : currentUser.role === "PARTICIPANT" && pathname === "/my/registrations" ? (
+          <MyRegistrations key="my-registrations" />
         ) : (
           <section className="dashboard-card" aria-labelledby="workspace-heading">
             <p className="eyebrow">Workspace</p>

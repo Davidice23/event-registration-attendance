@@ -349,7 +349,7 @@ describe("Sprint 1 STS — F-01 Auth & Session Lifecycle Integration Tests", () 
       }
     });
 
-    it("responds 501 NOT_IMPLEMENTED for the unreleased F-03 registration route", async () => {
+    it("routes participant registration to F-03: unknown event returns 404 NOT_FOUND", async () => {
       // Login as Participant
       const partLogin = await fetch(`${origin}/api/auth/login`, {
         method: "POST",
@@ -358,17 +358,17 @@ describe("Sprint 1 STS — F-01 Auth & Session Lifecycle Integration Tests", () 
       });
       const partSid = parseCookies(partLogin.headers.get("set-cookie")!)[SESSION_COOKIE_NAME];
 
-      // POST /api/events/:id/registrations with valid auth & origin returns 501 NOT_IMPLEMENTED
+      // POST /api/events/:id/registrations with valid auth & origin for a missing event returns 404
       const regRes = await fetch(`${origin}/api/events/11111111-1111-1111-1111-111111111111/registrations`, {
         method: "POST",
         headers: { "Origin": appOrigin, "Content-Type": "application/json", "Cookie": `sid=${partSid}` },
         body: JSON.stringify({}),
       });
-      expect(regRes.status).toBe(501);
+      expect(regRes.status).toBe(404);
       expect(await regRes.json()).toEqual({
         error: {
-          code: "NOT_IMPLEMENTED",
-          message: "Event registration endpoint will be implemented in F-03.",
+          code: "NOT_FOUND",
+          message: "Event not found.",
         },
       });
     });
