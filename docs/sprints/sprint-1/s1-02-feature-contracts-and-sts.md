@@ -122,7 +122,7 @@ TDD ที่จะเก็บเป็นหลักฐาน: รัน T-08
 
 ### 7.1 Integrated execution record (2026-11-14)
 
-ทดสอบบน commit `6b77db32506c08ec569b9ad795ca3cad9ffe5bda`; `staging` อยู่ที่ merge commit `6c2325e4370226f1f2c14358002465e9725cd818` และมี tree เดียวกัน `37a1d25a2bbdaef7d5aa5ac0e0cc52d04308801b`. Environment: Node.js 24.14.0, npm 11.9.0, PostgreSQL 18.1 ใน dedicated local test container, Microsoft Edge (`E2E_BROWSER_CHANNEL=msedge`). Integration/E2E ใช้เฉพาะ loopback test database `event_registration_test` บน port 5434; ไม่ใช้ dev/production DB.
+ทดสอบซ้ำบน local commit `ac477dc3389ae5e108649a68a3c51d9d8b66ef9b`, tree `172327270e61bb8ca3b24bc2b7951d6b28687a50`; tree นี้ตรงกับ `staging` merge commit `8f71d7f51c8adbaa252fc43007ebda6ac503d8d6`. Runtime implementation ที่ผ่าน test เป็นชุดเดียวกับ `6b77db32506c08ec569b9ad795ca3cad9ffe5bda` (tree `37a1d25a2bbdaef7d5aa5ac0e0cc52d04308801b`); PR #13 ระหว่างนั้นเปลี่ยนเฉพาะ README/เอกสาร Sprint 1. Environment: Node.js 24.14.0, npm 11.9.0, PostgreSQL 18.1 ใน dedicated local test container, Microsoft Edge (`E2E_BROWSER_CHANNEL=msedge`). Integration/E2E ใช้เฉพาะ loopback test database `event_registration_test` บน port 5434; ไม่ใช้ dev/production DB.
 
 | Command | Coverage / observed result | Status |
 |---|---|---|
@@ -132,7 +132,7 @@ TDD ที่จะเก็บเป็นหลักฐาน: รัน T-08
 | `npm run build` | Client TypeScript/Vite and server TypeScript builds | PASS |
 | `npm run db:validate` | Prisma schema validation | PASS |
 
-These are local command results, not GitHub Actions results. No PR-triggered GitHub Actions run was returned for the tested commit. The run record is aggregate; preserve the per-test ID → file/test name mapping in the feature PR descriptions and attach the required human screenshots/checklist before release. No screenshot/manual visual review is claimed in this record.
+These are local command results, not GitHub Actions results. GitHub reported no combined status checks or PR-triggered Actions runs for the latest `staging` merge commit. The run record is aggregate; preserve the per-test ID → file/test name mapping in the feature PR descriptions and attach the required human screenshots/checklist before release. No screenshot/manual visual review is claimed in this record.
 
 **บันทึกตอนดำเนินการจริง:** `Test ID → file/test name → command or CI link → expected/actual → PASS/FAIL/SKIP → exact SHA`. Feature implementation/review evidence: [PR #8](https://github.com/Davidice23/event-registration-attendance/pull/8)–[#12](https://github.com/Davidice23/event-registration-attendance/pull/12); consolidated GitHub review status is in [Sprint 1 index](README.md). Issues #2–#6 remain open because their PRs merged into `staging`; close references belong on the eventual release PR to `main`. There is no release SHA/tag yet.
 

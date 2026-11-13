@@ -2,7 +2,7 @@
 
 เอกสารนี้เป็นดัชนีเอกสารขอบเขตและออกแบบ Sprint 1 ของ CPE334 Group Project — Theme 3: Event Registration and Attendance System
 
-สถานะ ณ 14 พฤศจิกายน 2026: ทีมแจ้งยืนยันเอกสาร Sprint 1 v0.2 แล้ว. เอกสารผ่าน PR #1 และ implementation ของ F-01 ถึง F-04 รวมเข้า `staging` ผ่าน PR #8–#12. ล่าสุด `staging` อยู่ที่ merge commit `6c2325e4370226f1f2c14358002465e9725cd818`; integrated local tests ผ่านบน tree เดียวกัน (`37a1d25a2bbdaef7d5aa5ac0e0cc52d04308801b`). ณ เวลาตรวจ remote `main` ยังอยู่ที่ `da04e55533bf681579d85224079aba6d8302fb6a` (`Initial commit`). **Sprint 1 ยังไม่เป็น release:** ยังไม่มี release PR เข้า `main`, tag/SHA ของ release หรือการตรวจรับจากอาจารย์.
+สถานะ ณ 14 พฤศจิกายน 2026: ทีมแจ้งยืนยันเอกสาร Sprint 1 v0.2 แล้ว. เอกสารผ่าน PR #1 และ implementation ของ F-01 ถึง F-04 รวมเข้า `staging` ผ่าน PR #8–#12. ล่าสุด `staging` อยู่ที่ merge commit `8f71d7f51c8adbaa252fc43007ebda6ac503d8d6` (tree `172327270e61bb8ca3b24bc2b7951d6b28687a50`). รันทดสอบ release candidate ซ้ำบน local commit `ac477dc3389ae5e108649a68a3c51d9d8b66ef9b` ซึ่งมี tree เดียวกับ `staging`; PR #13 หลัง commit ที่ทดสอบเปลี่ยนเฉพาะ README/เอกสาร Sprint 1. Remote `main` ยังอยู่ที่ `da04e55533bf681579d85224079aba6d8302fb6a` (`Initial commit`). **Sprint 1 ยังไม่เป็น release:** ยังไม่มี release commit/tag บน `main` หรือการตรวจรับจากอาจารย์.
 
 ## เอกสาร
 
@@ -26,9 +26,9 @@
 
 Issues [#2](https://github.com/Davidice23/event-registration-attendance/issues/2)–[#6](https://github.com/Davidice23/event-registration-attendance/issues/6) remain Open because these feature PRs target `staging`, not the default branch `main`. A release PR should include closing references for #2–#6; do not manually mark them complete before the release merge.
 
-Integrated verification ran on `6b77db32506c08ec569b9ad795ca3cad9ffe5bda`; that commit's tree is identical to current `staging` tree `37a1d25a2bbdaef7d5aa5ac0e0cc52d04308801b` at merge commit `6c2325e4370226f1f2c14358002465e9725cd818`. On 2026-11-14 with Node 24.14.0, npm 11.9.0, PostgreSQL 18.1, and Microsoft Edge, local results were: `npm test` safety 6/6 + client 21/21 + server 39/39; `npm run test:integration` 27/27; `npm run test:e2e` 8/8 with no skipped tests; `npm run build` passed; `npm run db:validate` passed. No PR-triggered GitHub Actions run was returned for the tested commit. These results are local, not CI or deployment evidence.
+Integrated verification was rerun locally on commit `ac477dc3389ae5e108649a68a3c51d9d8b66ef9b`, tree `172327270e61bb8ca3b24bc2b7951d6b28687a50`, identical to `staging` merge commit `8f71d7f51c8adbaa252fc43007ebda6ac503d8d6`. On 2026-11-14 with Node 24.14.0, npm 11.9.0, PostgreSQL 18.1, and Microsoft Edge (`E2E_BROWSER_CHANNEL=msedge`), local results were: `npm test` safety 6/6 + client 21/21 + server 39/39; `npm run test:integration` 27/27; `npm run test:e2e` 8/8 with no skipped tests; `npm run build` passed; `npm run db:validate` passed. GitHub reported no combined status checks or PR-triggered Actions runs for the latest staging merge commit. These results are local, not CI or deployment evidence.
 
-**Remaining Sprint 1 release gates:** update and capture human visual/acceptance evidence for normal flow, persisted records, and denied access; create and review a release PR to `main`; run/verify the checks against the exact release commit; merge it and record its exact SHA/tag. No release or instructor acceptance is claimed yet.
+**Remaining Sprint 1 release gates:** a human must inspect/capture visual acceptance evidence for the normal flow, persisted records, and denied access; teammate review and merge of the release PR to `main`; verify the resulting exact `main` release commit and record its SHA/tag. No release or instructor acceptance is claimed yet. Do not treat automated E2E results as human visual review.
 
 ## แหล่งข้อกำหนดหลัก
 

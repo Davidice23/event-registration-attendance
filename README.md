@@ -69,7 +69,7 @@ Included: React/Vite client, Express/TypeScript API, Prisma/PostgreSQL schema an
 
 ## Sprint 1 release-readiness status (2026-11-14)
 
-The latest `staging` merge commit is `6c2325e4370226f1f2c14358002465e9725cd818`. Integrated verification was run on commit `6b77db32506c08ec569b9ad795ca3cad9ffe5bda`; its Git tree (`37a1d25a2bbdaef7d5aa5ac0e0cc52d04308801b`) is identical to the `staging` tree. At this audit, the remote default branch `main` remained at `da04e55533bf681579d85224079aba6d8302fb6a` (`Initial commit`). Environment: Node.js 24.14.0, npm 11.9.0, PostgreSQL 18.1 in the isolated test container, and installed Microsoft Edge (`E2E_BROWSER_CHANNEL=msedge`).
+The latest `staging` merge commit is `8f71d7f51c8adbaa252fc43007ebda6ac503d8d6` (tree `172327270e61bb8ca3b24bc2b7951d6b28687a50`). This release-candidate verification was rerun on local commit `ac477dc3389ae5e108649a68a3c51d9d8b66ef9b`, which has the exact same tree as the latest `staging` merge commit. The runtime implementation is unchanged from `6b77db32506c08ec569b9ad795ca3cad9ffe5bda` (tree `37a1d25a2bbdaef7d5aa5ac0e0cc52d04308801b`); the intervening PR #13 changed only README/Sprint 1 documentation. At this audit, remote `main` remained at `da04e55533bf681579d85224079aba6d8302fb6a` (`Initial commit`). Environment: Node.js 24.14.0, npm 11.9.0, PostgreSQL 18.1 in the isolated test container, and Microsoft Edge (`E2E_BROWSER_CHANNEL=msedge`).
 
 | Command | Result |
 |---|---|
@@ -79,4 +79,4 @@ The latest `staging` merge commit is `6c2325e4370226f1f2c14358002465e9725cd818`.
 | `npm run build` | Passed: client TypeScript/Vite and server TypeScript builds |
 | `npm run db:validate` | Passed: Prisma schema valid |
 
-These are local results; no PR-triggered GitHub Actions run was returned for the tested commit. The release PR to `main`, a release tag/SHA, and manual screenshot evidence are still pending. No instructor acceptance is claimed. Do not treat these local tests as Lab 5 Docker/CI/CD/deployment evidence.
+These are local results; GitHub reported no combined status checks or PR-triggered Actions runs for the latest `staging` merge commit. Manual visual screenshots/checklist, teammate review and merge of the release PR to `main`, and a release tag/SHA are still pending. No instructor acceptance is claimed. Do not treat these local tests as Lab 5 Docker/CI/CD/deployment evidence.
