@@ -80,8 +80,51 @@ describe("Sprint 1 F-02 — Publish & Discover", () => {
     ];
     for (const override of invalid) expect((await post("/api/events", { title: "Title", description: "Description", startsAt: "2026-11-15T09:00:00+07:00", location: "Hall", capacity: 2, ...override }, cookieA)).status).toBe(400);
     expect(await prisma.event.count()).toBe(0);
+    const invalidResponse = await post("/api/events", { title: "Title", description: "Description", startsAt: "2026-11-15T09:00:00+07:00", location: "Hall", capacity: 0 }, cookieA);
+    expect(invalidResponse.status).toBe(400);
+    expect(invalidResponse.headers.get("cache-control")).toBe("no-store");
     expect((await post("/api/events", { title: "Title", description: "Description", startsAt: "2026-11-15T09:00:00+07:00", location: "Hall", capacity: 1 }, cookieA)).status).toBe(201);
     expect(await prisma.event.count()).toBe(1);
+  });
+
+  it("sets no-store on event service errors", async () => {
+    const failingPrisma = new Proxy(prisma, {
+      get(target, property) {
+        if (property === "event") {
+          return new Proxy(target.event, {
+            get(delegate, method) {
+              if (method === "create" || method === "findMany") {
+                return async () => { throw new Error("Simulated event database failure"); };
+              }
+              return Reflect.get(delegate, method);
+            },
+          });
+        }
+        return Reflect.get(target, property);
+      },
+    });
+    const failingServer = createServer(createApp({ prisma: failingPrisma, appOrigin, secureCookies: false }));
+    await new Promise<void>(resolve => failingServer.listen(0, "127.0.0.1", resolve));
+    const address = failingServer.address();
+    if (!address || typeof address === "string") throw new Error("Expected a loopback test server address.");
+    const failingOrigin = `http://127.0.0.1:${address.port}`;
+
+    try {
+      const [publishError, discoverError] = await Promise.all([
+        fetch(`${failingOrigin}/api/events`, {
+          method: "POST",
+          headers: { Origin: appOrigin, "Content-Type": "application/json", Cookie: cookieA },
+          body: JSON.stringify({ title: "Title", description: "Description", startsAt: "2026-11-15T09:00:00Z", location: "Hall", capacity: 1 }),
+        }),
+        fetch(`${failingOrigin}/api/events`, { headers: { Cookie: cookieParticipant } }),
+      ]);
+      expect(publishError.status).toBe(500);
+      expect(publishError.headers.get("cache-control")).toBe("no-store");
+      expect(discoverError.status).toBe(500);
+      expect(discoverError.headers.get("cache-control")).toBe("no-store");
+    } finally {
+      await new Promise<void>((resolve, reject) => failingServer.close(error => error ? reject(error) : resolve()));
+    }
   });
 
   it("T-06: enforces role, authentication, and server-derived ownership", async () => {
