@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../server/src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ORGANIZER
+  PARTICIPANT
+}
+
+model User {
+  id              String         @id @default(uuid()) @db.Uuid
+  email           String         @unique @db.VarChar(320)
+  displayName     String         @db.VarChar(120)
+  role            Role
+  passwordHash    String         @db.VarChar(255)
+  createdAt       DateTime       @default(now()) @db.Timestamptz(6)
+  sessions        Session[]
+  events          Event[]        @relation("EventOrganizer")
+  registrations   Registration[] @relation("RegistrationParticipant")
+
+  @@map("users")
+}
+
+model Session {
+  tokenHash String   @id @db.VarChar(64)
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  expiresAt DateTime @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Event {
+  id          String         @id @default(uuid()) @db.Uuid
+  organizerId String         @db.Uuid
+  title       String         @db.VarChar(160)
+  description String         @db.Text
+  startsAt    DateTime       @db.Timestamptz(6)
+  location    String         @db.VarChar(200)
+  capacity    Int
+  createdAt   DateTime       @default(now()) @db.Timestamptz(6)
+  organizer   User           @relation("EventOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
+  registrations Registration[]
+
+  @@index([organizerId])
+  @@index([startsAt, id])
+  @@map("events")
+}
+
+model Registration {
+  id            String   @id @default(uuid()) @db.Uuid
+  eventId       String   @db.Uuid
+  participantId String   @db.Uuid
+  registeredAt  DateTime @default(now()) @db.Timestamptz(6)
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  participant   User     @relation("RegistrationParticipant", fields: [participantId], references: [id], onDelete: Restrict)
+
+  @@unique([eventId, participantId])
+  @@index([participantId, registeredAt, id])
+  @@index([eventId, registeredAt, id])
+  @@map("registrations")
+}
