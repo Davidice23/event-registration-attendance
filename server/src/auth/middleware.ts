@@ -19,12 +19,21 @@ export function isJsonContentType(contentType?: string): boolean {
   return mediaType === "application/json";
 }
 
+/**
+ * APP_ORIGIN holds one origin, or several separated by commas (Cloud Run serves one
+ * service at two URLs). Each entry must match the request's Origin header exactly.
+ */
+export function parseAllowedOrigins(appOrigin: string): Set<string> {
+  return new Set(appOrigin.split(",").map((origin) => origin.trim()).filter(Boolean));
+}
+
 export function createCsrfAndMediaGuard(appOrigin: string) {
+  const allowedOrigins = parseAllowedOrigins(appOrigin);
   return (req: Request, res: Response, next: NextFunction) => {
     // Only check mutating requests (POST, PUT, PATCH, DELETE)
     if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH" || req.method === "DELETE") {
       const origin = req.headers["origin"];
-      if (!origin || origin !== appOrigin) {
+      if (!origin || !allowedOrigins.has(origin)) {
         return res.status(403).json({
           error: {
             code: "CSRF_REJECTED",
