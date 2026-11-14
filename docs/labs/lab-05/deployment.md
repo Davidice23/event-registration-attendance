@@ -61,13 +61,32 @@ Placeholders only. Never commit real values.
 | Seed (local dev DB) | `npm run db:seed` |
 | Seed (deployed) | `npm run seed --workspace server` after `npm run build` |
 | Run built app | `npm run start --workspace server` with `CLIENT_DIST_DIR=client/dist` |
-| Docker build/run | _TBD in #18_ |
+| First Docker setup (PowerShell) | `Copy-Item .env.example .env` then set a local-only `POSTGRES_PASSWORD` using URI-safe characters (letters, numbers, `-`, `_`) |
+| Docker build and start app + database | `docker compose up --build` |
+| Check container readiness | `curl http://127.0.0.1:3001/api/ready` |
+| Stop containers, keep local database volume | `docker compose down` |
+| Apply migrations only | `docker compose run --build --rm migrate` |
+| Seed demo accounts (opt-in only) | Set `ALLOW_DEMO_SEED=1` and a local-only `DEMO_SEED_PASSWORD` in `.env`, then `docker compose --profile seed run --build --rm seed` |
 | Migrate (cloud) | _TBD in #20_ (`prisma migrate deploy` in a Cloud Run job) |
 
-## 5. GCP project, region and resources
+## 5. Container image and local Compose (Issue #18)
+
+- The root `Dockerfile` builds the React/Vite client and Express/TypeScript server from the root npm workspace lockfile, then copies their build output into one Node 24.14.0 runtime image. Express serves `client/dist` and the API from that same origin; the container binds `HOST=0.0.0.0` and reads `PORT` from the environment.
+- Build context is the repository root. `.dockerignore` excludes `.env` files (including the example), `.npmrc`, credentials, local dependencies, generated output, test artifacts, databases, documentation/evidence, and `.git`. `DATABASE_URL` and `DEMO_SEED_PASSWORD` are supplied only to a running service/job; they are not Docker build arguments or image files.
+- `docker compose up --build` starts the existing PostgreSQL development service, waits for it to become healthy, runs the one-shot `migrate` service, then starts `app`. Compose constructs the container's `DATABASE_URL` with the `postgres-dev` service hostname and sets `ALLOW_NON_LOCAL_DATABASE=1`; the host-only loopback allowlist remains unchanged for laptop/test commands.
+- PostgreSQL uses the existing named volume `event-registration-dev-data`. `docker compose down` preserves it; `docker compose down --volumes` deletes it and must be treated as a destructive local reset.
+- Compose migrations change the schema in that development volume. To keep a Docker smoke run separate from the usual local Compose project/database, run it with a unique project name (for example, `docker compose -p lab5-docker up --build`); this creates a separate named volume and still binds the same host ports, so stop conflicting Compose services first.
+- The `app` service healthcheck calls `/api/ready` from inside the container using Node's built-in `fetch`; a healthy status means the HTTP server is serving and its database readiness check succeeded.
+- Demo seed is deliberately outside the default `up` flow. To seed the four synthetic accounts, set `ALLOW_DEMO_SEED=1` and a local-only `DEMO_SEED_PASSWORD` of at least 12 characters in `.env`, then run `docker compose --profile seed run --rm seed`. The seed service waits for migrations and is safe to rerun.
+- **Migration image decision:** Prisma CLI currently lives in the root `devDependencies`. The runtime stage therefore copies the root lockfile's installed workspace `node_modules`, plus `prisma.config.ts`, `prisma/`, and the compiled seed. This keeps `prisma migrate deploy` available in the same immutable image for the one-shot Compose service and the later Cloud Run Job (Step 5), without adding a second Docker image or migrating concurrently at API startup. This makes the image larger than a production-only dependency install; optimize only if the migration CLI remains available in the exact same deployable image.
+- Local Compose publishes only to `127.0.0.1:${PORT}` and sets `APP_ORIGIN` to that exact URL. Open `http://127.0.0.1:3001` when using the `.env.example` port. Do not change the browser host to `localhost` unless `APP_ORIGIN` is changed to match.
+
+For a reproducible verification, record the tested commit and the actual results for Docker build, Compose startup, `/api/ready`, persistence-after-restart, and image-secret inspection in the Issue #18 PR. This document defines the procedure; it does not claim those checks have already passed.
+
+## 6. GCP project, region and resources
 
 _TBD in #16 and #20._
 
-## 6. Release procedure and finding the running commit
+## 7. Release procedure and finding the running commit
 
 _TBD in #22._
