@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { login, type CurrentUser } from "../api/auth";
 
 interface LoginFormProps {
@@ -36,8 +36,12 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
     }
   };
 
+  const passwordRef = useRef<HTMLInputElement>(null);
+
+  // Fills the email only. The password is never in the client; move focus so it is typed next.
   const handleQuickFill = (demoEmail: string) => {
     setEmail(demoEmail);
+    passwordRef.current?.focus();
   };
 
   return (
@@ -70,6 +74,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
           <label htmlFor="login-password">Password</label>
           <input
             id="login-password"
+            ref={passwordRef}
             type="password"
             autoComplete="current-password"
             value={password}
@@ -90,22 +95,27 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
       </form>
 
       {/* Development-only helper: production builds (the deployed app) omit it entirely. */}
-      {import.meta.env.DEV && <div className="demo-accounts-hint">
-        <span className="demo-hint-title">Quick demo accounts:</span>
+      {import.meta.env.DEV && <div className="demo-accounts-hint" role="group" aria-labelledby="demo-hint-title">
+        <span className="demo-hint-title" id="demo-hint-title">Fill a demo email (development only):</span>
+        <p className="demo-hint-note" id="demo-hint-note">
+          Fills the email address only. Type the password yourself: it is the <code>DEMO_SEED_PASSWORD</code> from your local <code>.env</code>.
+        </p>
         <div className="demo-hint-buttons">
           <button
             type="button"
             className="btn-chip"
+            aria-describedby="demo-hint-note"
             onClick={() => handleQuickFill("organizer-a@example.test")}
           >
-            Organizer A
+            Organizer A email
           </button>
           <button
             type="button"
             className="btn-chip"
+            aria-describedby="demo-hint-note"
             onClick={() => handleQuickFill("participant-a@example.test")}
           >
-            Participant A
+            Participant A email
           </button>
         </div>
       </div>}

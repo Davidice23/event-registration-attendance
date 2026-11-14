@@ -70,3 +70,34 @@ test("seed refuses missing configuration before loading the hasher or connecting
   assert.match(result.stderr, /DATABASE_URL is required/);
   assert.match(result.stderr, /no data was written/);
 });
+
+test(".env.example documents every environment variable the code reads", async () => {
+  const { readFileSync, readdirSync, statSync } = await import("node:fs");
+  const path = await import("node:path");
+  const root = fileURLToPath(new URL("..", import.meta.url));
+  const sources = ["server/src", "client/src", "scripts", "e2e", "playwright.config.ts", "prisma.config.ts", "client/vite.config.ts"];
+  const skip = new Set(["node_modules", "generated", "dist"]);
+  const files = [];
+  const walk = (entry) => {
+    const full = path.join(root, entry);
+    if (statSync(full).isDirectory()) {
+      for (const name of readdirSync(full)) if (!skip.has(name)) walk(path.join(entry, name));
+    } else if (/\.(ts|tsx|mjs)$/.test(full) && !/\.test\.(ts|tsx|mjs)$/.test(full)) {
+      files.push(full);
+    }
+  };
+  sources.forEach(walk);
+
+  // Set by the tools themselves, not by the project.
+  const builtIn = new Set(["DEV", "npm_execpath"]);
+  const used = new Set();
+  for (const file of files) {
+    const text = readFileSync(file, "utf8");
+    for (const match of text.matchAll(/(?:process\.env|import\.meta\.env)\.([A-Za-z_][A-Za-z0-9_]*)/g)) used.add(match[1]);
+    for (const match of text.matchAll(/\benv\("([A-Z_][A-Z0-9_]*)"\)/g)) used.add(match[1]);
+  }
+  const documented = new Set([...readFileSync(path.join(root, ".env.example"), "utf8").matchAll(/^#?\s*([A-Z_][A-Z0-9_]*)=/gm)].map(m => m[1]));
+  const missing = [...used].filter(name => !builtIn.has(name) && !documented.has(name)).sort();
+  assert.ok(used.has("DATABASE_URL"), "scanner found no variables; the source paths are wrong");
+  assert.deepEqual(missing, [], `Add these to .env.example: ${missing.join(", ")}`);
+});
