@@ -9,11 +9,14 @@ set -euo pipefail
 #   DRY_RUN=1 PROJECT_ID=YOUR_PROJECT_ID bash deploy/deploy.sh --demo   # print the plan, no gcloud calls
 #   PROJECT_ID=YOUR_PROJECT_ID bash deploy/deploy.sh --demo             # create everything and deploy
 #
+# Who may run it: the project OWNER only. A preflight (step 0) checks that the active gcloud
+# account is a direct Owner and that billing is enabled, and stops before anything is created.
+#
 # Environment: PROJECT_ID (default: active gcloud project), REGION (default asia-southeast1), DRY_RUN=1.
 # --demo creates a demo-account password in Secret Manager and seeds the four synthetic
 #        example.test accounts (needed for Lab 6 UAT). Without it, only migrations run.
 #
-# Steps: 1 APIs · 2 Artifact Registry · 3 Cloud SQL instance · 4 database · 5 runtime service account
+# Steps: 0 preflight · 1 APIs · 2 Artifact Registry · 3 Cloud SQL instance · 4 database · 5 service accounts
 #        6 DB user + DATABASE_URL secret · 7 demo password secret · secret access per secret
 #        8 image build · 9 migration job (migrate, optional seed) · 10 Cloud Run service · 11 APP_ORIGIN
 #
@@ -72,8 +75,13 @@ DB_NAME="event_registration"
 DB_USER="event_app"
 SERVICE_NAME="event-reg"
 MIGRATE_JOB_NAME="event-reg-migrate"
+# Two identities so the public service can never read the demo password:
+#   event-reg-runner   = Cloud Run service (public): Cloud SQL client + DATABASE_URL only
+#   event-reg-migrator = migration/seed job:         Cloud SQL client + DATABASE_URL + demo password
 SA_NAME="event-reg-runner"
 SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+JOB_SA_NAME="event-reg-migrator"
+JOB_SA_EMAIL="${JOB_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 SQL_CONN_NAME="${PROJECT_ID}:${REGION}:${SQL_INSTANCE}"
 IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${SERVICE_NAME}:latest"
 APP_PORT="3001"   # must match EXPOSE/PORT in the Dockerfile
@@ -89,6 +97,39 @@ echo "Region  : ${REGION}"
 echo "Demo    : ${SEED_DEMO_DATA}"
 echo "Dry Run : ${DRY_RUN}"
 echo "=================================================================="
+
+fail() {
+  printf 'Preflight failed: %s\n' "$1" >&2
+  printf '%s\n' "Nothing was created or changed." >&2
+  exit 1
+}
+
+# 0. Preflight: nothing is created until the operator and billing are confirmed. ---------
+#    The script grants IAM roles (projects/secrets add-iam-policy-binding), which needs
+#    setIamPolicy. The Editor role the Student Guide gives teammates (1.3) does NOT include it,
+#    so an Editor would fail halfway, after the billable Cloud SQL instance exists. Only a
+#    project Owner (the member who created the project) may run this script.
+if [ "$DRY_RUN" = "1" ]; then
+  echo "[DRY_RUN] preflight: would confirm the active gcloud account holds roles/owner on ${PROJECT_ID}"
+  echo "[DRY_RUN] preflight: would confirm billing is enabled for ${PROJECT_ID}"
+else
+  OPERATOR="$(gcloud auth list --filter=status:ACTIVE --format='value(account)' 2>/dev/null | head -n 1 || true)"
+  [ -n "$OPERATOR" ] || fail "no active gcloud account. Run: gcloud auth login"
+  case "$OPERATOR" in
+    *.gserviceaccount.com) OPERATOR_MEMBER="serviceAccount:${OPERATOR}" ;;
+    *) OPERATOR_MEMBER="user:${OPERATOR}" ;;
+  esac
+  if ! OWNERS="$(gcloud projects get-iam-policy "$PROJECT_ID" --flatten='bindings[].members' \
+      --filter='bindings.role=roles/owner' --format='value(bindings.members)' 2>/dev/null)"; then
+    fail "cannot read the IAM policy of ${PROJECT_ID} as ${OPERATOR}. Check the project ID and your access."
+  fi
+  if ! printf '%s\n' "$OWNERS" | grep -qxF "$OPERATOR_MEMBER"; then
+    fail "${OPERATOR} is not a direct Owner of ${PROJECT_ID}. This script grants IAM roles, which the Editor role cannot do. Ask the project Owner (the member who created the project) to run it in their Cloud Shell."
+  fi
+  BILLING_ENABLED="$(gcloud billing projects describe "$PROJECT_ID" --format='value(billingEnabled)' 2>/dev/null || true)"
+  [ "$BILLING_ENABLED" = "True" ] || fail "billing is not enabled for ${PROJECT_ID} (Student Guide 1.4). Link the Free Trial billing account first; never prepay or click Upgrade."
+  echo "Preflight OK: ${OPERATOR} is an Owner of ${PROJECT_ID}, and billing is enabled."
+fi
 
 # 1. APIs ----------------------------------------------------------------------
 run_cmd gcloud services enable \
@@ -131,17 +172,20 @@ if [ "$DRY_RUN" = "1" ] || ! gcloud sql databases describe "$DB_NAME" --instance
   run_cmd gcloud sql databases create "$DB_NAME" --instance="$SQL_INSTANCE" --project "$PROJECT_ID"
 fi
 
-# 5. Runtime service account: Cloud SQL client only; secrets are granted one by one below.
-if [ "$DRY_RUN" = "1" ] || ! gcloud iam service-accounts describe "$SA_EMAIL" --project "$PROJECT_ID" >/dev/null 2>&1; then
-  run_cmd gcloud iam service-accounts create "$SA_NAME" \
-    --display-name="Event Registration Cloud Run runtime" \
-    --project "$PROJECT_ID"
-fi
-run_cmd gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:${SA_EMAIL}" \
-  --role="roles/cloudsql.client" \
-  --condition=None \
-  --quiet
+# 5. Service accounts: Cloud SQL client only; secrets are granted one by one below.
+ensure_service_account() {
+  local name="$1" email="$2" display="$3"
+  if [ "$DRY_RUN" = "1" ] || ! gcloud iam service-accounts describe "$email" --project "$PROJECT_ID" >/dev/null 2>&1; then
+    run_cmd gcloud iam service-accounts create "$name" --display-name="$display" --project "$PROJECT_ID"
+  fi
+  run_cmd gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:${email}" \
+    --role="roles/cloudsql.client" \
+    --condition=None \
+    --quiet
+}
+ensure_service_account "$SA_NAME" "$SA_EMAIL" "Event Registration Cloud Run service (public)"
+ensure_service_account "$JOB_SA_NAME" "$JOB_SA_EMAIL" "Event Registration migration and seed job"
 
 # 6. DB user + DATABASE_URL secret (only when the secret does not exist yet) --------------
 #    The URL uses the Cloud SQL unix socket that Cloud Run mounts at /cloudsql/<connection>.
@@ -182,15 +226,17 @@ if [ "$SEED_DEMO_DATA" = "true" ]; then
   JOB_COMMAND="${JOB_COMMAND} && node server/dist/seed.js"
 fi
 
-# Secret access per secret (never project-wide secretAccessor).
-RUNTIME_SECRETS=("$SECRET_DB_URL")
-if [ "$SEED_DEMO_DATA" = "true" ]; then RUNTIME_SECRETS+=("$SECRET_DEMO_PASS"); fi
-for secret in "${RUNTIME_SECRETS[@]}"; do
-  run_cmd gcloud secrets add-iam-policy-binding "$secret" \
-    --member="serviceAccount:${SA_EMAIL}" \
+# Secret access per secret and per identity (never project-wide secretAccessor).
+# The public service reads DATABASE_URL only; the demo password is readable by the job alone.
+grant_secret() {
+  run_cmd gcloud secrets add-iam-policy-binding "$1" \
+    --member="serviceAccount:$2" \
     --role="roles/secretmanager.secretAccessor" \
     --project "$PROJECT_ID" --quiet
-done
+}
+grant_secret "$SECRET_DB_URL" "$SA_EMAIL"
+grant_secret "$SECRET_DB_URL" "$JOB_SA_EMAIL"
+if [ "$SEED_DEMO_DATA" = "true" ]; then grant_secret "$SECRET_DEMO_PASS" "$JOB_SA_EMAIL"; fi
 
 # 8. Build and push the image with Cloud Build (root Dockerfile). `latest` is only for this
 #    first manual setup; the pipeline tags every image with the full commit SHA.
@@ -201,7 +247,7 @@ run_cmd gcloud builds submit --tag "$IMAGE_URI" --project "$PROJECT_ID"
 run_cmd gcloud run jobs deploy "$MIGRATE_JOB_NAME" \
   --image "$IMAGE_URI" \
   --region "$REGION" \
-  --service-account "$SA_EMAIL" \
+  --service-account "$JOB_SA_EMAIL" \
   --set-cloudsql-instances "$SQL_CONN_NAME" \
   --set-secrets "$JOB_SECRETS" \
   --set-env-vars "$JOB_ENV" \
@@ -264,6 +310,16 @@ fi
 
 printf '\n'
 printf '%s\n' "=================================================================="
+if [ "$DRY_RUN" = "1" ]; then
+  printf '%s\n' "DRY RUN ONLY: no gcloud command was executed."
+  printf '%s\n' "Nothing was created, changed or deployed, and nothing was billed."
+  printf '%s\n' "The URLs below are placeholders (project number 000000000000)."
+  printf '%s\n' "To deploy for real, run the same command without DRY_RUN=1 as the project Owner."
+  printf '%s\n' "------------------------------------------------------------------"
+  printf '%s\n' "Planned service URL: ${DETERMINISTIC_URL}"
+  printf '%s\n' "=================================================================="
+  exit 0
+fi
 printf '%s\n' "Deployment completed"
 printf '%s\n' "Service URL    : ${DETERMINISTIC_URL}"
 printf '%s\n' "Allowed origins: ${SERVICE_URLS}"
@@ -271,7 +327,7 @@ printf '%s\n' "Readiness      : ${DETERMINISTIC_URL}/api/ready"
 printf '%s\n' "Database URL   : stored in Secret Manager '${SECRET_DB_URL}' (not printed)"
 if [ "$SEED_DEMO_DATA" = "true" ]; then
   printf '%s\n' "Demo accounts  : organizer-a/-b@example.test, participant-a/-b@example.test"
-  printf '%s\n' "Demo password  : stored in Secret Manager '${SECRET_DEMO_PASS}' (not printed; read it privately)"
+  printf '%s\n' "Demo password  : stored in Secret Manager '${SECRET_DEMO_PASS}' (not printed; readable only by ${JOB_SA_NAME} and project Owners)"
 fi
 printf '%s\n' "Next           : check the resources in the Console (Student Guide 5.7) and that storage auto-increase is off (5.4)."
 printf '%s\n' "=================================================================="
