@@ -16,6 +16,16 @@ describe("createPrismaClient local database guard", () => {
     expect(() => createPrismaClient("postgresql://event_app:local@127.0.0.1:5432/event_registration_dev")).toThrow(/configured local/);
   });
 
+  it("accepts a non-local PostgreSQL URL only with the explicit opt-in, and still requires PostgreSQL", () => {
+    const cloudSql = "postgresql://event_app:placeholder@localhost/event_registration?host=/cloudsql/project:region:instance";
+    expect(() => createPrismaClient(cloudSql, false)).toThrow(/configured local/);
+    expect(() => createPrismaClient("postgresql://event_app:placeholder@db.example.com:5432/app", false)).toThrow(/Only loopback/);
+    const client = createPrismaClient(cloudSql, true);
+    clients.push(client);
+    expect(client).toBeDefined();
+    expect(() => createPrismaClient("mysql://user:placeholder@db.example.com:3306/app", true)).toThrow(/must use PostgreSQL/);
+  });
+
   it("constructs a client for the dedicated local test database without connecting", async () => {
     const client = createPrismaClient("postgresql://event_app:local-only-change-me@127.0.0.1:5434/event_registration_test?schema=public");
     clients.push(client);

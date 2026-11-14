@@ -89,7 +89,8 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
         </button>
       </form>
 
-      <div className="demo-accounts-hint">
+      {/* Development-only helper: production builds (the deployed app) omit it entirely. */}
+      {import.meta.env.DEV && <div className="demo-accounts-hint">
         <span className="demo-hint-title">Quick demo accounts:</span>
         <div className="demo-hint-buttons">
           <button
@@ -107,7 +108,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
             Participant A
           </button>
         </div>
-      </div>
+      </div>}
     </section>
   );
 }
