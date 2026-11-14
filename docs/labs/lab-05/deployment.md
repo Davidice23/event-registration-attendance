@@ -40,7 +40,7 @@ Placeholders only. Never commit real values.
 | `APP_ORIGIN` | The only Origin allowed for `POST` (CSRF check) | No | `http://127.0.0.1:5173` | Cloud Run env = the service URL _(TBD in #20)_ |
 | `PORT` | Listen port | No | `3001` | Set by Cloud Run |
 | `HOST` | Listen address | No | `127.0.0.1` | `0.0.0.0` |
-| `CLIENT_DIST_DIR` | Built client served by the API | No | Unset (Vite dev server) | Image path _(TBD in #18)_ |
+| `CLIENT_DIST_DIR` | Built client served by the API | No | Unset (Vite dev server) | `/app/client/dist` |
 | `ALLOW_DEMO_SEED` | Opt-in for the seed commands | No | `0` | `1` on the migration job only |
 | `DEMO_SEED_PASSWORD` | Password for the four demo accounts (≥ 12 chars) | **Yes** | `.env`, local-only | Secret Manager _(name TBD in #20)_, shared with the Lab 6 partner team privately |
 | `ALLOW_TEST_DB_RESET` | Opt-in for `npm run db:reset:test` | No | `0` | Not used |
