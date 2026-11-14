@@ -92,4 +92,6 @@ jobs:
 
       - name: Note when no Dockerfile exists yet
         if: hashFiles('Dockerfile') == ''
-        run: echo "::notice title=Docker build skipped::No Dockerfile on this commit yet (added in Lab 5 Step 2, #18)."
+        # Block scalar: in a plain YAML value " #" would start a comment and cut the command.
+        run: |
+          echo "::notice title=Docker build skipped::No Dockerfile on this commit yet (added in Lab 5 Step 2, #18)."
