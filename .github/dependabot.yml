@@ -1,0 +1,8 @@
+version: 2
+updates:
+  # Proposes a Pull Request when a pinned GitHub Action has a newer release.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [lab5]
