@@ -1,8 +1,20 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createPrismaClient } from "./db.js";
 
 describe("createPrismaClient local database guard", () => {
   const clients: ReturnType<typeof createPrismaClient>[] = [];
+  const savedDatabaseUrl = process.env.DATABASE_URL;
+
+  // createPrismaClient() falls back to process.env.DATABASE_URL. CI sets it for the whole
+  // job, so isolate these tests from the shell instead of depending on it being unset.
+  beforeEach(() => {
+    delete process.env.DATABASE_URL;
+  });
+
+  afterEach(() => {
+    if (savedDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = savedDatabaseUrl;
+  });
 
   afterAll(async () => {
     await Promise.all(clients.map((client) => client.$disconnect()));
@@ -14,6 +26,16 @@ describe("createPrismaClient local database guard", () => {
     expect(() => createPrismaClient("postgresql://event_app:local@db.example.com:5433/event_registration_dev")).toThrow(/Only loopback/);
     expect(() => createPrismaClient("postgresql://event_app:local@127.0.0.1:5433/other_database")).toThrow(/configured local/);
     expect(() => createPrismaClient("postgresql://event_app:local@127.0.0.1:5432/event_registration_dev")).toThrow(/configured local/);
+  });
+
+  it("accepts a non-local PostgreSQL URL only with the explicit opt-in, and still requires PostgreSQL", () => {
+    const cloudSql = "postgresql://event_app:placeholder@localhost/event_registration?host=/cloudsql/project:region:instance";
+    expect(() => createPrismaClient(cloudSql, false)).toThrow(/configured local/);
+    expect(() => createPrismaClient("postgresql://event_app:placeholder@db.example.com:5432/app", false)).toThrow(/Only loopback/);
+    const client = createPrismaClient(cloudSql, true);
+    clients.push(client);
+    expect(client).toBeDefined();
+    expect(() => createPrismaClient("mysql://user:placeholder@db.example.com:3306/app", true)).toThrow(/must use PostgreSQL/);
   });
 
   it("constructs a client for the dedicated local test database without connecting", async () => {
