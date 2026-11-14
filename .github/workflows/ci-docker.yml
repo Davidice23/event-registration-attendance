@@ -63,6 +63,12 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      # Offline: gcloud and openssl are stubs, so this never touches GCP.
+      - name: Check deployment scripts without accessing GCP
+        run: |
+          bash -n deploy/*.sh
+          bash deploy/tests/test_deploy_stub.sh
+
       - name: Install dependencies
         run: npm ci
 
