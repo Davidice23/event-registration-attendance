@@ -39,7 +39,7 @@ MIGRATION_EXEC_LINE="$(grep -nF 'gcloud run jobs execute team123-migrate --wait'
 SERVICE_UPDATE_LINE="$(grep -nF "gcloud run services update team123 --image=$EXPECTED_DIGEST" "$CALL_LOG" | cut -d: -f1)"
 test -n "$MIGRATION_EXEC_LINE" && test -n "$SERVICE_UPDATE_LINE"
 test "$MIGRATION_EXEC_LINE" -lt "$SERVICE_UPDATE_LINE"
-grep -Fq "gcloud run jobs update team123-migrate --image=$EXPECTED_DIGEST " "$CALL_LOG"
+grep -Fq "gcloud run jobs update team123-migrate --image=$EXPECTED_DIGEST --command=./node_modules/.bin/prisma --args=migrate,deploy " "$CALL_LOG"
 grep -Fq "gcloud run services update team123 --image=$EXPECTED_DIGEST " "$CALL_LOG"
 grep -q 'SERVICE_URL=https://service.example.test' "$GITHUB_ENV"
 grep -q 'Deployed commit: 1111111111111111111111111111111111111111' "$TASK_TMP/normal-output"
