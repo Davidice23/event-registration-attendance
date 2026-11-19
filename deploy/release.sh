@@ -59,7 +59,11 @@ else
 fi
 
 if [[ "$ROLLBACK" == false ]]; then
+  # The Cloud Portal's pre-provisioned job has a placeholder command that
+  # intentionally exits. Set both fields explicitly so the immutable image
+  # runs this repository's Prisma migration instead of retaining that override.
   run_cmd gcloud run jobs update "$MIGRATE_JOB_NAME" --image="$DIGEST_IMAGE" \
+    --command=./node_modules/.bin/prisma --args=migrate,deploy \
     --project="$PROJECT_ID" --region="$REGION" --quiet
   run_cmd gcloud run jobs execute "$MIGRATE_JOB_NAME" --wait \
     --project="$PROJECT_ID" --region="$REGION" --quiet
