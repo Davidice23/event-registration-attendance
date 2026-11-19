@@ -25,6 +25,7 @@ export MIGRATE_JOB_NAME=team123-migrate
 export ARTIFACT_REGISTRY_REPOSITORY=team123
 export IMAGE=asia-southeast1-docker.pkg.dev/cpe-se-course-2026/team123/event-registration-attendance:portal-tag
 export IMAGE_TAG=1111111111111111111111111111111111111111
+export APP_ORIGIN=https://team123-hash-uc.a.run.app,https://team123-123456789.asia-southeast1.run.app
 export DRY_RUN=1
 
 bash "$ROOT/deploy/deploy.sh" > "$TASK_TMP/output"
@@ -34,6 +35,8 @@ grep -q 'docker build --tag asia-southeast1-docker.pkg.dev/cpe-se-course-2026/te
 grep -q '\[DRY_RUN\] docker push' "$TASK_TMP/output"
 grep -q '\[DRY_RUN\] gcloud run jobs update team123-migrate' "$TASK_TMP/output"
 grep -q '\[DRY_RUN\] gcloud run services update team123' "$TASK_TMP/output"
+grep -Fq 'ALLOW_NON_LOCAL_DATABASE=1@APP_ORIGIN=https://team123-hash-uc.a.run.app' "$TASK_TMP/output"
+grep -Fq 'https://team123-123456789.asia-southeast1.run.app' "$TASK_TMP/output"
 grep -q 'nothing was built, pushed, migrated, or deployed' "$TASK_TMP/output"
 test ! -s "$CALL_LOG"
 if grep -Eq 'services enable| run (deploy|jobs deploy)|sql instances create| projects add-iam-policy-binding|secrets create|teardown' "$TASK_TMP/output"; then

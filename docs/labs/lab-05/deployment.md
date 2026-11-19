@@ -103,11 +103,21 @@ _Record in Issue #20 from Team resources (names only, never secret values):_ pro
 
 ### First application deployment (after portal provisioning)
 
-The latest course announcement says **Resources ready does not mean the app is deployed**. Once that status appears, use the exact values from Team resources. For the repository helper, set `PROJECT_ID=cpe-se-course-2026`, `REGION=asia-southeast1`, `TEAM_PREFIX`, `SERVICE_NAME`, `MIGRATE_JOB_NAME`, `ARTIFACT_REGISTRY_REPOSITORY`, and `IMAGE`. Copy the exact image reference from Team resources; do not infer the registry host, repository, or image name. The helper replaces an optional existing tag with the full 40-character commit SHA.
+The latest course announcement says **Resources ready does not mean the app is deployed**. Once that status appears, use the exact values from Team resources. For the repository helper, set `PROJECT_ID=cpe-se-course-2026`, `REGION=asia-southeast1`, `TEAM_PREFIX`, `SERVICE_NAME`, `MIGRATE_JOB_NAME`, `ARTIFACT_REGISTRY_REPOSITORY`, `IMAGE`, and `APP_ORIGIN`. Copy the exact image reference from Team resources; do not infer the registry host, repository, or image name. The helper replaces an optional existing tag with the full 40-character commit SHA.
+
+For a manual dry run, resolve the service's two public origins using read-only metadata calls, then export them as a comma-separated list without paths or trailing slashes:
+
+```bash
+SERVICE_URL="$(gcloud run services describe "$SERVICE_NAME" --project="$PROJECT_ID" --region="$REGION" --format='value(status.url)')"
+PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+export APP_ORIGIN="$SERVICE_URL,https://${SERVICE_NAME}-${PROJECT_NUMBER}.${REGION}.run.app"
+```
+
+Cloud Run documents the deterministic origin format as `https://SERVICE_NAME-PROJECT_NUMBER.REGION.run.app`; `status.url` supplies the service's unique URL. The helper prints the planned origins in dry-run mode. The GitHub `release.sh` path derives both origins with read-only `describe` calls if `APP_ORIGIN` is absent.
 
 Run from a clean checkout of the accepted `main` commit, after verifying the values against Team resources. The `DRY_RUN=1` preview invokes neither gcloud nor Docker. Read the plan and confirm each name starts with the team's prefix. Only then run with `CONFIRM_DEPLOY` equal to that prefix. The real run checks that the active gcloud account/project are correct and that the exact registry, job, and service already exist before pushing or updating anything. Its order is: build/push the commit-tagged image, resolve its immutable digest, update and execute the existing migration job, then update the existing service. A failed migration prevents the service update.
 
-The script intentionally makes **no** Cloud SQL, IAM, secret, API, service, or job creation changes. On the existing migration job, it sets the image digest and explicitly overrides the Portal placeholder with `./node_modules/.bin/prisma migrate deploy`; otherwise the placeholder command would run instead of the image's migration command. It does not add secret values to the image, logs, command-line arguments, or repository. Do not deploy before the portal says Resources ready; do not click Activate repeatedly while provisioning is in progress.
+The script intentionally makes **no** Cloud SQL, IAM, secret, API, service, or job creation changes. On the existing migration job, it sets the image digest and explicitly overrides the Portal placeholder with `./node_modules/.bin/prisma migrate deploy`; otherwise the placeholder command would run instead of the image's migration command. On the existing service, it adds `ALLOW_NON_LOCAL_DATABASE=1` and the exact `APP_ORIGIN` list through `--update-env-vars`, preserving Portal-provided Secret references. The value delimiter is escaped because `APP_ORIGIN` contains a comma. It does not add secret values to the image, logs, command-line arguments, or repository. Do not deploy before the portal says Resources ready; do not click Activate repeatedly while provisioning is in progress.
 
 ### Repeatable releases from `main`
 
