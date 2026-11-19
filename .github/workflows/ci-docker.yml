@@ -84,6 +84,20 @@ jobs:
       - name: Validate Prisma schema
         run: npm run db:validate
 
+      - name: Set up Python for deployment helper tests
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Check deployment helper shell syntax
+        run: bash -n deploy/*.sh deploy/tests/*.sh
+
+      - name: Test deployment helpers without accessing GCP or Docker
+        run: |
+          bash deploy/tests/test_deploy_stub.sh
+          bash deploy/tests/test_release_stub.sh
+          python3 -m unittest discover -s deploy/tests -p 'test_smoke.py'
+
       # The Dockerfile arrives in Step 2 (#18). Until it is on this branch the step is
       # skipped and says so; afterwards a broken image build fails the job.
       - name: Verify production Docker image builds
