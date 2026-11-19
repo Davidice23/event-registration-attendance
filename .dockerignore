@@ -1,0 +1,31 @@
+# Credentials and local configuration must never enter the build context.
+.env
+**/.env
+.env.*
+**/.env.*
+.npmrc
+**/.npmrc
+gha-creds-*.json
+**/gha-creds-*.json
+
+# Dependencies and generated/build output are recreated in the image build.
+**/node_modules
+**/dist
+**/build
+server/src/generated
+
+# Local test artifacts, databases, uploads, and repository metadata.
+**/coverage
+**/test-results
+**/playwright-report
+**/*.log
+**/*.db
+**/*.sqlite
+server/uploads
+docs
+e2e
+artifacts
+.github
+.git
+**/.git
+.gitignore

@@ -255,3 +255,12 @@ test("F-03 UI: POST succeeds but the follow-up My Registrations read fails — n
   await expect(page.getByRole("button", { name: "ตรวจรายการของฉัน" })).toHaveCount(0);
   expect(posts).toBe(1);
 });
+
+test("Dev login helper fills the demo email only and moves focus to the password", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText("Fills the email address only.")).toBeVisible();
+  await page.getByRole("button", { name: "Participant A email" }).click();
+  await expect(page.getByLabel("Email Address")).toHaveValue("participant-a@example.test");
+  await expect(page.getByLabel("Password")).toHaveValue("");
+  await expect(page.getByLabel("Password")).toBeFocused();
+});

@@ -31,6 +31,70 @@ services:
       timeout: 3s
       retries: 20
 
+  # This one-shot service applies migrations before the API starts. The image
+  # is the same artifact later used by the Cloud Run migration job.
+  migrate:
+    image: event-registration-attendance:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: "no"
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+    environment: &runtime-environment
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: ${PORT:-3001}
+      DATABASE_URL: postgresql://event_app:${POSTGRES_PASSWORD:?Copy .env.example to .env and set a local-only password}@postgres-dev:5432/event_registration_dev?schema=public
+      ALLOW_NON_LOCAL_DATABASE: "1"
+      APP_ORIGIN: "http://127.0.0.1:${PORT:-3001}"
+      CLIENT_DIST_DIR: /app/client/dist
+      TZ: Asia/Bangkok
+    command: ["./node_modules/.bin/prisma", "migrate", "deploy"]
+
+  # Demo accounts are opt-in. This service is excluded from the default `up`;
+  # enable it only after setting ALLOW_DEMO_SEED=1 and a local-only password.
+  seed:
+    image: event-registration-attendance:local
+    profiles: ["seed"]
+    restart: "no"
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *runtime-environment
+      ALLOW_DEMO_SEED: ${ALLOW_DEMO_SEED:-0}
+      DEMO_SEED_PASSWORD: ${DEMO_SEED_PASSWORD:-}
+    command: ["node", "server/dist/seed.js"]
+
+  app:
+    image: event-registration-attendance:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment: *runtime-environment
+    ports:
+      - "127.0.0.1:${PORT:-3001}:${PORT:-3001}"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:' + process.env.PORT + '/api/ready').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
 volumes:
   event-registration-dev-data:
   event-registration-test-data:

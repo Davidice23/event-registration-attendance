@@ -1,7 +1,15 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/prisma/client.js";
 
-export function createPrismaClient(connectionString = process.env.DATABASE_URL) {
+/**
+ * By default only the two local loopback databases are accepted, so a mistyped URL can never
+ * reach a shared database from a laptop or a test run. Deployed environments (Cloud Run with
+ * Cloud SQL, Docker Compose) opt in explicitly with ALLOW_NON_LOCAL_DATABASE=1.
+ */
+export function createPrismaClient(
+  connectionString = process.env.DATABASE_URL,
+  allowNonLocal = process.env.ALLOW_NON_LOCAL_DATABASE === "1",
+) {
   if (!connectionString) {
     throw new Error("DATABASE_URL is required before creating a database client.");
   }
@@ -11,6 +19,13 @@ export function createPrismaClient(connectionString = process.env.DATABASE_URL) 
     url = new URL(connectionString);
   } catch {
     throw new Error("DATABASE_URL must be a valid local PostgreSQL URL.");
+  }
+
+  if (allowNonLocal) {
+    if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
+      throw new Error("DATABASE_URL must use PostgreSQL.");
+    }
+    return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
   }
 
   const database = decodeURIComponent(url.pathname.replace(/^\//, ""));

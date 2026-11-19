@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, Role } from "../server/src/generated/prisma/client.js";
+import { PrismaClient } from "../server/src/generated/prisma/client.js";
+import { DEMO_USERS, seedDemoUsers } from "../server/src/seed/demo-users.js";
 
 function fail(message: string): never {
   console.error(`Seed safety check failed: ${message}`);
@@ -30,23 +31,10 @@ if (!password || password.length < 12) fail("DEMO_SEED_PASSWORD must be at least
 const { default: argon2 } = await import("argon2");
 const adapter = new PrismaPg({ connectionString: url.href });
 const prisma = new PrismaClient({ adapter });
-const demoUsers = [
-  { email: "organizer-a@example.test", displayName: "Organizer A", role: Role.ORGANIZER },
-  { email: "organizer-b@example.test", displayName: "Organizer B", role: Role.ORGANIZER },
-  { email: "participant-a@example.test", displayName: "Participant A", role: Role.PARTICIPANT },
-  { email: "participant-b@example.test", displayName: "Participant B", role: Role.PARTICIPANT },
-];
-
 try {
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
-  for (const user of demoUsers) {
-    await prisma.user.upsert({
-      where: { email: user.email },
-      create: { ...user, passwordHash },
-      update: {},
-    });
-  }
-  console.log(`Ensured ${demoUsers.length} synthetic demo users in the loopback development database.`);
+  const created = await seedDemoUsers(prisma, passwordHash);
+  console.log(`Ensured ${DEMO_USERS.length} synthetic demo users in the loopback development database (${created} created).`);
 } catch {
   console.error("Seed failed. No connection details or password values were printed.");
   process.exitCode = 1;
