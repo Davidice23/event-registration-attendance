@@ -4,12 +4,12 @@
 name: Deploy course application
 
 on:
-  push:
-    branches: [main]
+  # Step 5 first deploys are run manually from a clean main checkout. Keep
+  # automatic releases disabled until Step 6's GitHub-to-GCP WIF setup is ready.
   workflow_dispatch:
     inputs:
       image_tag:
-        description: 'Rollback to an existing full 40-character commit SHA; leave empty to deploy current main.'
+        description: 'Deploy current main or roll back to an existing full 40-character commit SHA (requires WIF setup).'
         type: string
         required: false
         default: ''
