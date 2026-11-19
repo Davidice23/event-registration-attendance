@@ -107,7 +107,7 @@ The latest course announcement says **Resources ready does not mean the app is d
 
 Run from a clean checkout of the accepted `main` commit, after verifying the values against Team resources. The `DRY_RUN=1` preview invokes neither gcloud nor Docker. Read the plan and confirm each name starts with the team's prefix. Only then run with `CONFIRM_DEPLOY` equal to that prefix. The real run checks that the active gcloud account/project are correct and that the exact registry, job, and service already exist before pushing or updating anything. Its order is: build/push the commit-tagged image, resolve its immutable digest, update and execute the existing migration job, then update the existing service. A failed migration prevents the service update.
 
-The script intentionally makes **no** Cloud SQL, IAM, secret, API, service, or job creation changes. It does not add secret values to the image, logs, command-line arguments, or repository. Do not deploy before the portal says Resources ready; do not click Activate repeatedly while provisioning is in progress.
+The script intentionally makes **no** Cloud SQL, IAM, secret, API, service, or job creation changes. On the existing migration job, it sets the image digest and explicitly overrides the Portal placeholder with `./node_modules/.bin/prisma migrate deploy`; otherwise the placeholder command would run instead of the image's migration command. It does not add secret values to the image, logs, command-line arguments, or repository. Do not deploy before the portal says Resources ready; do not click Activate repeatedly while provisioning is in progress.
 
 ### Repeatable releases from `main`
 
