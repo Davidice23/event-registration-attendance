@@ -43,6 +43,7 @@ jobs:
     env:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       REGION: ${{ vars.GCP_REGION }}
+      PROJECT_NUMBER: "670075229477"
       TEAM_PREFIX: sbdec8d5b
       SERVICE_NAME: sbdec8d5b
       MIGRATE_JOB_NAME: sbdec8d5b-migrate
@@ -65,6 +66,7 @@ jobs:
           set -euo pipefail
           test "$PROJECT_ID" = "cpe-se-course-2026"
           test "$REGION" = "asia-southeast1"
+          test "$PROJECT_NUMBER" = "670075229477"
           test "$WIF_PROVIDER" = "projects/670075229477/locations/global/workloadIdentityPools/sbdec8d5b-pool/providers/sbdec8d5b-provider"
           test "$WIF_SERVICE_ACCOUNT" = "sbdec8d5b-deployer@cpe-se-course-2026.iam.gserviceaccount.com"
           [[ "$IMAGE" =~ ^asia-southeast1-docker\.pkg\.dev/cpe-se-course-2026/sbdec8d5b/sbdec8d5b:[0-9a-f]{40}$ ]]
