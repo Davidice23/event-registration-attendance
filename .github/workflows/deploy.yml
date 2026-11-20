@@ -1,15 +1,15 @@
-# Deploy accepted main releases to the resources already provisioned by the
-# CPE334 Cloud Portal. This workflow updates only names from the Team resources
-# tab; it never creates/deletes resources or changes IAM, billing, APIs or secrets.
+# Deploy accepted main releases only to the resources assigned to team sbdec8d5b.
+# Uses the course Portal's four GitHub Environment variables and WIF; it never
+# creates/deletes resources or changes IAM, billing, APIs, or secrets.
 name: Deploy course application
 
 on:
-  # Step 5 first deploys are run manually from a clean main checkout. Keep
-  # automatic releases disabled until Step 6's GitHub-to-GCP WIF setup is ready.
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       image_tag:
-        description: 'Deploy current main or roll back to an existing full 40-character commit SHA (requires WIF setup).'
+        description: 'Optional rollback to an existing full 40-character commit SHA; leave empty to deploy current main.'
         type: string
         required: false
         default: ''
@@ -18,11 +18,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-course-application
+  group: deploy-demo
   cancel-in-progress: false
 
 jobs:
-  # Reuse the pull-request quality gate before each ordinary release.
+  # Re-run the existing Lab 5 quality gate for ordinary releases. A rollback
+  # reuses an existing immutable image and skips the build/test job.
   test:
     if: github.ref == 'refs/heads/main' && !inputs.image_tag
     uses: ./.github/workflows/ci-docker.yml
@@ -35,7 +36,6 @@ jobs:
        (github.event_name == 'workflow_dispatch' && inputs.image_tag != '' && needs.test.result == 'skipped'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # The course Portal provides its WIF variables for this repository environment.
     environment: demo
     permissions:
       contents: read
@@ -43,11 +43,12 @@ jobs:
     env:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       REGION: ${{ vars.GCP_REGION }}
-      TEAM_PREFIX: ${{ vars.TEAM_PREFIX }}
-      SERVICE_NAME: ${{ vars.SERVICE_NAME }}
-      MIGRATE_JOB_NAME: ${{ vars.MIGRATE_JOB_NAME }}
-      ARTIFACT_REGISTRY_REPOSITORY: ${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
-      IMAGE: ${{ vars.IMAGE }}
+      PROJECT_NUMBER: "670075229477"
+      TEAM_PREFIX: sbdec8d5b
+      SERVICE_NAME: sbdec8d5b
+      MIGRATE_JOB_NAME: sbdec8d5b-migrate
+      ARTIFACT_REGISTRY_REPOSITORY: sbdec8d5b
+      IMAGE: asia-southeast1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/sbdec8d5b/sbdec8d5b:${{ inputs.image_tag || github.sha }}
       IMAGE_TAG: ${{ inputs.image_tag || github.sha }}
       ROLLBACK: ${{ inputs.image_tag != '' }}
 
@@ -57,23 +58,18 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Validate portal-provided settings
+      - name: Validate portal WIF settings and team resources
         env:
           WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
           WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT }}
         run: |
+          set -euo pipefail
           test "$PROJECT_ID" = "cpe-se-course-2026"
           test "$REGION" = "asia-southeast1"
-          [[ "$TEAM_PREFIX" =~ ^[a-z][a-z0-9-]*$ ]]
-          case "$SERVICE_NAME" in "$TEAM_PREFIX"|"$TEAM_PREFIX"-*) ;; *) exit 1 ;; esac
-          case "$MIGRATE_JOB_NAME" in "$TEAM_PREFIX"|"$TEAM_PREFIX"-*) ;; *) exit 1 ;; esac
-          case "$ARTIFACT_REGISTRY_REPOSITORY" in "$TEAM_PREFIX"|"$TEAM_PREFIX"-*) ;; *) exit 1 ;; esac
-          [[ "$IMAGE" =~ ^asia-southeast1-docker\.pkg\.dev/cpe-se-course-2026/([^/]+)/([^/:]+)(:[A-Za-z0-9_][A-Za-z0-9._-]{0,127})?$ ]]
-          IMAGE_REPOSITORY="${BASH_REMATCH[1]}"
-          [[ "$IMAGE_REPOSITORY" == "$ARTIFACT_REGISTRY_REPOSITORY" ]]
-          case "$IMAGE_REPOSITORY" in "$TEAM_PREFIX"|"$TEAM_PREFIX"-*) ;; *) exit 1 ;; esac
-          test -n "$WIF_PROVIDER" && test -n "$WIF_SERVICE_ACCOUNT"
-          [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]]
+          test "$PROJECT_NUMBER" = "670075229477"
+          test "$WIF_PROVIDER" = "projects/670075229477/locations/global/workloadIdentityPools/sbdec8d5b-pool/providers/sbdec8d5b-provider"
+          test "$WIF_SERVICE_ACCOUNT" = "sbdec8d5b-deployer@cpe-se-course-2026.iam.gserviceaccount.com"
+          [[ "$IMAGE" =~ ^asia-southeast1-docker\.pkg\.dev/cpe-se-course-2026/sbdec8d5b/sbdec8d5b:[0-9a-f]{40}$ ]]
           [[ "$ROLLBACK" == true || "$ROLLBACK" == false ]]
 
       - name: Authenticate to Google Cloud using portal-provided WIF
@@ -85,8 +81,9 @@ jobs:
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
 
-      - name: Verify only the exact portal-provisioned resources
+      - name: Verify only this team's provisioned resources exist
         run: |
+          set -euo pipefail
           gcloud artifacts repositories describe "$ARTIFACT_REGISTRY_REPOSITORY" \
             --project="$PROJECT_ID" --location="$REGION" --format='value(name)' >/dev/null
           gcloud run jobs describe "$MIGRATE_JOB_NAME" \
@@ -94,16 +91,17 @@ jobs:
           gcloud run services describe "$SERVICE_NAME" \
             --project="$PROJECT_ID" --region="$REGION" --format='value(metadata.name)' >/dev/null
 
-      - name: Build and push image tagged with the commit SHA
+      - name: Build and push commit-tagged image
         if: env.ROLLBACK != 'true'
         run: |
+          set -euo pipefail
           gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
-          IMAGE_BASE="${IMAGE%:*}"
-          TAGGED_IMAGE="$IMAGE_BASE:$IMAGE_TAG"
-          docker build --tag "$TAGGED_IMAGE" .
-          docker push "$TAGGED_IMAGE"
+          docker build --tag "$IMAGE" .
+          docker push "$IMAGE"
 
-      - name: Verify image, run migration job, and update service
+      # release.sh verifies the image digest, updates/runs the team's Prisma
+      # migration job, then updates only this team's service and traffic.
+      - name: Verify image, migrate, and deploy the service
         run: bash deploy/release.sh
 
       - name: Set up Python for the read-only smoke test
@@ -128,5 +126,6 @@ jobs:
             echo "- Service: \`$SERVICE_NAME\`"
             echo "- Public URL: $SERVICE_URL"
             echo "- Rollback: $ROLLBACK"
-            echo '- Migration, service update, and smoke test completed in this run.'
+            echo '- Migration, service update, and read-only smoke test completed in this run.'
           } >> "$GITHUB_STEP_SUMMARY"
+
