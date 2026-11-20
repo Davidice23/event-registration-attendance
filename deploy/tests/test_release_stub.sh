@@ -53,6 +53,16 @@ grep -q 'Deployed commit: 1111111111111111111111111111111111111111' "$TASK_TMP/n
 echo 'PASS normal release resolves digest, waits for migration, then updates the service'
 
 : > "$CALL_LOG"
+env -u APP_ORIGIN PROJECT_NUMBER=123456789 bash "$ROOT/deploy/release.sh" > "$TASK_TMP/portal-project-number-output"
+if grep -q 'gcloud projects describe ' "$CALL_LOG"; then
+  echo 'A portal-supplied project number must avoid the project-wide metadata lookup.' >&2
+  exit 1
+fi
+grep -q 'gcloud run services describe team123 .*status.url' "$CALL_LOG"
+grep -Fq -- '--update-env-vars=^@^ALLOW_NON_LOCAL_DATABASE=1@APP_ORIGIN=https://team123-hash-uc.a.run.app,https://team123-123456789.asia-southeast1.run.app' "$CALL_LOG"
+echo 'PASS portal-supplied project number avoids resourcemanager.projects.get and derives both origins'
+
+: > "$CALL_LOG"
 export ROLLBACK=true
 bash "$ROOT/deploy/release.sh" > "$TASK_TMP/rollback-output"
 if grep -q 'run jobs ' "$CALL_LOG"; then
@@ -133,3 +143,4 @@ if IMAGE=asia-southeast1-docker.pkg.dev/cpe-se-course-2026/other-team/app bash "
 fi
 test ! -s "$CALL_LOG"
 echo 'PASS image path outside the portal-provided team repository rejected before any gcloud call'
+
