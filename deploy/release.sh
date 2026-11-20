@@ -7,6 +7,7 @@ set -euo pipefail
 
 PROJECT_ID="${PROJECT_ID:-${GCP_PROJECT_ID:-}}"
 REGION="${REGION:-${GCP_REGION:-}}"
+PROJECT_NUMBER="${PROJECT_NUMBER:-}"
 TEAM_PREFIX="${TEAM_PREFIX:-}"
 SERVICE_NAME="${SERVICE_NAME:-}"
 MIGRATE_JOB_NAME="${MIGRATE_JOB_NAME:-}"
@@ -47,7 +48,12 @@ if [[ "$DRY_RUN" == 1 ]]; then
 else
   SERVICE_URL="$(gcloud run services describe "$SERVICE_NAME" --project="$PROJECT_ID" \
     --region="$REGION" --format='value(status.url)')"
-  PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+  # The GitHub deployer can be scoped to the team's resources and may not have
+  # project-wide resourcemanager.projects.get. CI supplies the verified project
+  # number from the Cloud Portal; retain the read-only lookup for manual runs.
+  if [[ -z "$PROJECT_NUMBER" ]]; then
+    PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+  fi
   [[ "$SERVICE_URL" =~ ^https://[A-Za-z0-9.-]+\.run\.app$ ]] || fail 'Cloud Run did not return a valid HTTPS run.app service URL.'
   [[ "$PROJECT_NUMBER" =~ ^[0-9]+$ ]] || fail 'Google Cloud did not return a valid project number.'
   EXPECTED_APP_ORIGIN="$SERVICE_URL,https://${SERVICE_NAME}-${PROJECT_NUMBER}.${REGION}.run.app"
@@ -111,3 +117,4 @@ printf 'Deployed commit: %s\nImage digest: %s\nService URL: %s\n' "$IMAGE_TAG" "
 if [[ -n "${GITHUB_ENV:-}" ]]; then
   printf 'SERVICE_URL=%s\nDEPLOYED_IMAGE=%s\n' "$SERVICE_URL" "$DIGEST_IMAGE" >> "$GITHUB_ENV"
 fi
+
