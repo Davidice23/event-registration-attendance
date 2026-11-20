@@ -113,7 +113,7 @@ PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(project
 export APP_ORIGIN="$SERVICE_URL,https://${SERVICE_NAME}-${PROJECT_NUMBER}.${REGION}.run.app"
 ```
 
-Cloud Run documents the deterministic origin format as `https://SERVICE_NAME-PROJECT_NUMBER.REGION.run.app`; `status.url` supplies the service's unique URL. The helper prints the planned origins in dry-run mode. The GitHub `release.sh` path derives both origins with read-only `describe` calls if `APP_ORIGIN` is absent.
+Cloud Run documents the deterministic origin format as `https://SERVICE_NAME-PROJECT_NUMBER.REGION.run.app`; `status.url` supplies the service's unique URL. The helper prints the planned origins in dry-run mode. A GitHub release derives both origins from the service URL and the project number verified from the Cloud Portal; it does not need the deployer service account to call the project-wide `gcloud projects describe` API. Manual runs still perform that read-only lookup when `PROJECT_NUMBER` is not supplied.
 
 Run from a clean checkout of the accepted `main` commit, after verifying the values against Team resources. The `DRY_RUN=1` preview invokes neither gcloud nor Docker. Read the plan and confirm each name starts with the team's prefix. Only then run with `CONFIRM_DEPLOY` equal to that prefix. The real run checks that the active gcloud account/project are correct and that the exact registry, job, and service already exist before pushing or updating anything. Its order is: build/push the commit-tagged image, resolve its immutable digest, update and execute the existing migration job, then update the existing service. A failed migration prevents the service update.
 
@@ -123,25 +123,21 @@ The script intentionally makes **no** Cloud SQL, IAM, secret, API, service, or j
 
 After Step 6's GitHub-to-GCP connection and merge gate are configured, `.github/workflows/deploy.yml` deploys only from `main`. An ordinary release reuses `ci-docker.yml`, builds and pushes an image tagged with the full commit SHA, resolves the image digest, waits for the existing migration job, updates the existing service, and runs read-only smoke checks for `/api/health`, `/api/ready`, `/`, and `/events`. An optional low-privilege smoke account can also check login, `/api/auth/me`, logout, and session invalidation; set both `SMOKE_EMAIL` and `SMOKE_PASSWORD`, or neither. Never use an administrator account for the optional smoke check.
 
-The workflow expects these variables in the `demo` environment. Use the exact names from Team resources; if the portal provides equivalent values under different labels, map them to these names. `WIF_PROVIDER` and `WIF_SERVICE_ACCOUNT` must be the portal-provided GitHub values. If either is missing, stop and ask the TA; do not create service accounts, pools, providers, or IAM bindings manually.
+Create the GitHub environment `demo` and set the four variables shown by the Cloud Portal after connecting this exact public repository. The workflow reads only these four required environment variables; its team resource names and image path are pinned in the workflow to the values confirmed in Team resources (`sbdec8d5b`, `sbdec8d5b-migrate`, and `asia-southeast1-docker.pkg.dev/cpe-se-course-2026/sbdec8d5b/sbdec8d5b`). Do not change them to another team's resources. `WIF_PROVIDER` and `WIF_SERVICE_ACCOUNT` must be copied exactly from the portal. If either is missing or does not match this repository's connection, the workflow stops before authentication or resource changes; do not create service accounts, pools, providers, or IAM bindings manually.
 
 | GitHub environment variable | Value source |
 |---|---|
 | `GCP_PROJECT_ID` | Fixed course project: `cpe-se-course-2026` |
 | `GCP_REGION` | Fixed course region: `asia-southeast1` |
-| `TEAM_PREFIX` | Team resources tab |
-| `SERVICE_NAME` | Team resources tab |
-| `MIGRATE_JOB_NAME` | Team resources tab |
-| `ARTIFACT_REGISTRY_REPOSITORY` | Team resources tab |
-| `IMAGE` | Exact image reference from Team resources (existing tag, if any, is replaced by the full commit SHA) |
 | `WIF_PROVIDER` | Portal-provided GitHub variable; never invent this value |
 | `WIF_SERVICE_ACCOUNT` | Portal-provided GitHub variable; never invent this value |
 | `SMOKE_EMAIL` | Optional dedicated, low-privilege test account |
 
-`SMOKE_PASSWORD` is optional and, when used, belongs in the GitHub environment **secret**, never a variable or file. The workflow uses the `demo` environment and only `main` starts a normal deployment. Keep Actions pinned to full commit SHAs and leave the `test-and-docker` check name unchanged.
+`TEAM_PREFIX`, `SERVICE_NAME`, `MIGRATE_JOB_NAME`, `ARTIFACT_REGISTRY_REPOSITORY`, and `IMAGE` are not GitHub variables in this workflow: they are pinned to this team's verified portal resource names in `.github/workflows/deploy.yml`. `PROJECT_NUMBER=670075229477` is likewise pinned to the project number verified from Cloud Shell/Portal, so deployment does not depend on project-wide `resourcemanager.projects.get`. `SMOKE_EMAIL` is optional; if set, also set `SMOKE_PASSWORD` as a GitHub environment **secret**, never as a variable or file. Leave both unset to run the health/readiness/UI checks without login. The workflow uses the `demo` environment and a push to `main` starts a normal deployment; manual dispatch is also restricted to `main`. Because merging a release PR to `main` triggers deployment automatically, merge only after the team has explicitly approved that release and confirmed the `demo` environment is configured. Keep Actions pinned to full commit SHAs and leave the `test-and-docker` check name unchanged.
 
 ### Identify a release and roll back safely
 
 Open **Actions → Deploy course application → run → Summary**. It records the full commit SHA image tag, immutable image digest, service name, URL, and whether the run was a rollback. In Cloud Run, verify that the current revision uses that digest and that the migration job's latest execution succeeded. A normal rollback is a manual workflow run from `main` with `image_tag` set to a previously successful full SHA; the workflow skips migration and points only the existing service back to that image. It does not reverse database migrations. Follow a rollback with a forward fix through the normal reviewed PR path.
 
 For every release, record the PR into `staging`, the release PR into `main`, the CI run, the deployment run, and the commit/digest shown in the running Cloud Run revision. These links and evidence support R-07/R-08 and C-06; do not claim a deployment, persistence check, or smoke result until the corresponding run or live check actually passes.
+
