@@ -3,7 +3,8 @@ import { isHealthResponse } from "./health";
 
 describe("isHealthResponse", () => {
   it("accepts the API health envelope", () => {
-    expect(isHealthResponse({ data: { status: "ok" } })).toBe(true);
+    // C-02 merge gate proof (#21): intentionally wrong expectation. Never merge.
+    expect(isHealthResponse({ data: { status: "ok" } })).toBe(false);
   });
 
   it("rejects incomplete or malformed values", () => {
