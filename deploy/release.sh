@@ -13,8 +13,10 @@ MIGRATE_JOB_NAME="${MIGRATE_JOB_NAME:-}"
 ARTIFACT_REGISTRY_REPOSITORY="${ARTIFACT_REGISTRY_REPOSITORY:-}"
 PORTAL_IMAGE="${IMAGE:-}"
 IMAGE_TAG="${IMAGE_TAG:-}"
+APP_ORIGIN="${APP_ORIGIN:-}"
 ROLLBACK="${ROLLBACK:-false}"
 DRY_RUN="${DRY_RUN:-0}"
+SERVICE_URL=""
 
 fail() { printf 'ERROR: %s\n' "$1" >&2; exit 1; }
 is_team_resource() {
@@ -36,6 +38,23 @@ IMAGE_BASE="${PORTAL_IMAGE%:*}"
 [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]] || fail 'IMAGE_TAG must be a full 40-character commit SHA.'
 [[ "$ROLLBACK" == true || "$ROLLBACK" == false ]] || fail 'ROLLBACK must be true or false.'
 [[ "$DRY_RUN" == 0 || "$DRY_RUN" == 1 ]] || fail 'DRY_RUN must be 0 or 1.'
+
+if [[ -n "$APP_ORIGIN" ]]; then
+  [[ "$APP_ORIGIN" =~ ^https://[A-Za-z0-9.-]+\.run\.app(,https://[A-Za-z0-9.-]+\.run\.app)*$ ]] || fail 'APP_ORIGIN must be comma-separated HTTPS Cloud Run run.app origins without paths or trailing slashes.'
+fi
+if [[ "$DRY_RUN" == 1 ]]; then
+  [[ -n "$APP_ORIGIN" ]] || fail 'Set APP_ORIGIN to the exact Cloud Run URL(s) before previewing a dry run.'
+else
+  SERVICE_URL="$(gcloud run services describe "$SERVICE_NAME" --project="$PROJECT_ID" \
+    --region="$REGION" --format='value(status.url)')"
+  PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+  [[ "$SERVICE_URL" =~ ^https://[A-Za-z0-9.-]+\.run\.app$ ]] || fail 'Cloud Run did not return a valid HTTPS run.app service URL.'
+  [[ "$PROJECT_NUMBER" =~ ^[0-9]+$ ]] || fail 'Google Cloud did not return a valid project number.'
+  EXPECTED_APP_ORIGIN="$SERVICE_URL,https://${SERVICE_NAME}-${PROJECT_NUMBER}.${REGION}.run.app"
+  [[ -z "$APP_ORIGIN" || "$APP_ORIGIN" == "$EXPECTED_APP_ORIGIN" ]] || fail 'APP_ORIGIN must exactly match the existing service URLs.'
+  APP_ORIGIN="$EXPECTED_APP_ORIGIN"
+fi
+[[ "$APP_ORIGIN" =~ ^https://[A-Za-z0-9.-]+\.run\.app(,https://[A-Za-z0-9.-]+\.run\.app)*$ ]] || fail 'APP_ORIGIN must be comma-separated HTTPS Cloud Run run.app origins without paths or trailing slashes.'
 
 TAGGED_IMAGE="$IMAGE_BASE:$IMAGE_TAG"
 
@@ -72,6 +91,7 @@ else
 fi
 
 run_cmd gcloud run services update "$SERVICE_NAME" --image="$DIGEST_IMAGE" \
+  "--update-env-vars=^@^ALLOW_NON_LOCAL_DATABASE=1@APP_ORIGIN=$APP_ORIGIN" \
   --project="$PROJECT_ID" --region="$REGION" --quiet
 run_cmd gcloud run services update-traffic "$SERVICE_NAME" --to-latest \
   --project="$PROJECT_ID" --region="$REGION" --quiet
@@ -81,8 +101,10 @@ if [[ "$DRY_RUN" == 1 ]]; then
   exit 0
 fi
 
-SERVICE_URL="$(gcloud run services describe "$SERVICE_NAME" --project="$PROJECT_ID" \
-  --region="$REGION" --format='value(status.url)')"
+if [[ -z "$SERVICE_URL" ]]; then
+  SERVICE_URL="$(gcloud run services describe "$SERVICE_NAME" --project="$PROJECT_ID" \
+    --region="$REGION" --format='value(status.url)')"
+fi
 [[ "$SERVICE_URL" =~ ^https://[A-Za-z0-9.-]+$ ]] || fail 'Cloud Run did not return a valid HTTPS service URL.'
 printf 'Deployed commit: %s\nImage digest: %s\nService URL: %s\n' "$IMAGE_TAG" "$DIGEST_IMAGE" "$SERVICE_URL"
 
