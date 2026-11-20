@@ -9,6 +9,7 @@ set -euo pipefail
 #   PROJECT_ID=cpe-se-course-2026 REGION=asia-southeast1
 #   TEAM_PREFIX SERVICE_NAME MIGRATE_JOB_NAME ARTIFACT_REGISTRY_REPOSITORY
 #   IMAGE (the exact image reference from Team resources), IMAGE_TAG (HEAD)
+#   APP_ORIGIN (comma-separated exact Cloud Run service URL origins)
 # DRY_RUN=1 prints a plan without invoking gcloud or Docker.
 # For a real deployment set CONFIRM_DEPLOY to exactly TEAM_PREFIX.
 
@@ -23,6 +24,7 @@ SERVICE_NAME="${SERVICE_NAME:-}"
 MIGRATE_JOB_NAME="${MIGRATE_JOB_NAME:-}"
 ARTIFACT_REGISTRY_REPOSITORY="${ARTIFACT_REGISTRY_REPOSITORY:-}"
 PORTAL_IMAGE="${IMAGE:-}"
+APP_ORIGIN="${APP_ORIGIN:-}"
 DRY_RUN="${DRY_RUN:-0}"
 CONFIRM_DEPLOY="${CONFIRM_DEPLOY:-}"
 
@@ -44,6 +46,12 @@ is_team_resource "$IMAGE_REPOSITORY" || fail 'IMAGE must use a repository owned 
 [[ "$IMAGE_REPOSITORY" == "$ARTIFACT_REGISTRY_REPOSITORY" ]] || fail 'IMAGE repository must match ARTIFACT_REGISTRY_REPOSITORY from Team resources.'
 IMAGE_BASE="${PORTAL_IMAGE%:*}"
 [[ "$DRY_RUN" == 0 || "$DRY_RUN" == 1 ]] || fail 'DRY_RUN must be 0 or 1.'
+validate_app_origin() {
+  [[ "$APP_ORIGIN" =~ ^https://[A-Za-z0-9.-]+\.run\.app(,https://[A-Za-z0-9.-]+\.run\.app)*$ ]] || fail 'APP_ORIGIN must be comma-separated HTTPS Cloud Run run.app origins without paths or trailing slashes.'
+}
+if [[ "$DRY_RUN" == 1 ]]; then
+  validate_app_origin
+fi
 
 IMAGE_TAG="${IMAGE_TAG:-$(git rev-parse HEAD 2>/dev/null)}"
 [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]] || fail 'IMAGE_TAG must be the full 40-character commit SHA.'
@@ -65,6 +73,7 @@ if [[ "$DRY_RUN" == 1 ]]; then
     "$PROJECT_ID" "$REGION" "$TEAM_PREFIX" "$SERVICE_NAME" "$MIGRATE_JOB_NAME" \
     "$ARTIFACT_REGISTRY_REPOSITORY" "$IMAGE_TAG"
   printf 'Exact portal image reference: %s\n' "$PORTAL_IMAGE"
+  printf 'Allowed browser origins: %s\n' "$APP_ORIGIN"
   printf 'Plan: verify these existing named resources, build and push the image, migrate, then update the service.\n'
 else
   [[ "$(git branch --show-current 2>/dev/null)" == main ]] || fail 'Run a real first deployment from a clean checkout of main.'
@@ -87,6 +96,16 @@ else
   gcloud run services describe "$SERVICE_NAME" \
     --project="$PROJECT_ID" --region="$REGION" --format='value(metadata.name)' >/dev/null
 
+  SERVICE_URL="$(gcloud run services describe "$SERVICE_NAME" --project="$PROJECT_ID" \
+    --region="$REGION" --format='value(status.url)')"
+  PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+  [[ "$SERVICE_URL" =~ ^https://[A-Za-z0-9.-]+\.run\.app$ ]] || fail 'Cloud Run did not return a valid HTTPS run.app service URL.'
+  [[ "$PROJECT_NUMBER" =~ ^[0-9]+$ ]] || fail 'Google Cloud did not return a valid project number.'
+  EXPECTED_APP_ORIGIN="$SERVICE_URL,https://${SERVICE_NAME}-${PROJECT_NUMBER}.${REGION}.run.app"
+  [[ -z "$APP_ORIGIN" || "$APP_ORIGIN" == "$EXPECTED_APP_ORIGIN" ]] || fail 'APP_ORIGIN must exactly match the existing service URLs.'
+  APP_ORIGIN="$EXPECTED_APP_ORIGIN"
+  validate_app_origin
+
   [[ -n "$CONFIRM_DEPLOY" ]] || fail 'Deployment confirmation is required.'
 fi
 
@@ -102,6 +121,7 @@ MIGRATE_JOB_NAME="$MIGRATE_JOB_NAME" \
 ARTIFACT_REGISTRY_REPOSITORY="$ARTIFACT_REGISTRY_REPOSITORY" \
 IMAGE="$PORTAL_IMAGE" \
 IMAGE_TAG="$IMAGE_TAG" \
+APP_ORIGIN="$APP_ORIGIN" \
 DRY_RUN="$DRY_RUN" \
   bash "$SCRIPT_DIR/release.sh"
 
