@@ -60,6 +60,16 @@ def json_status(body, path, expected):
     )
 
 
+def health_status(body, expected_commit_sha):
+    payload = parse_json(body, "/api/health")
+    data = payload.get("data") if isinstance(payload, dict) else None
+    return (
+        isinstance(data, dict)
+        and data.get("status") == "ok"
+        and (not expected_commit_sha or data.get("commitSha") == expected_commit_sha)
+    )
+
+
 def retry_check(base, path, predicate):
     for attempt in range(5):
         try:
@@ -77,13 +87,14 @@ def retry_check(base, path, predicate):
 def check(base):
     email = os.getenv("SMOKE_EMAIL", "")
     password = os.getenv("SMOKE_PASSWORD", "")
+    expected_commit_sha = os.getenv("EXPECTED_COMMIT_SHA", "")
     if bool(email) != bool(password):
         raise SmokeCheckError("Set both SMOKE_EMAIL and SMOKE_PASSWORD, or neither.")
 
     retry_check(
         base,
         "/api/health",
-        lambda body: json_status(body, "/api/health", "ok"),
+        lambda body: health_status(body, expected_commit_sha),
     )
     retry_check(
         base,

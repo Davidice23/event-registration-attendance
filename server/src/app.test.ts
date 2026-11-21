@@ -103,7 +103,7 @@ describe("GET /api/health", () => {
   let origin: string;
 
   beforeAll(async () => {
-    server = createServer(createApp());
+    server = createServer(createApp({ appCommitSha: "0123456789abcdef0123456789abcdef01234567" }));
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("Expected a TCP test server address.");
@@ -118,6 +118,6 @@ describe("GET /api/health", () => {
     const response = await fetch(`${origin}/api/health`);
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(await response.json()).toEqual({ data: { status: "ok" } });
+    expect(await response.json()).toEqual({ data: { status: "ok", commitSha: "0123456789abcdef0123456789abcdef01234567" } });
   });
 });
