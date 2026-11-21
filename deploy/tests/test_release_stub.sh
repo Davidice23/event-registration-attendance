@@ -59,7 +59,7 @@ if grep -q 'gcloud projects describe ' "$CALL_LOG"; then
   exit 1
 fi
 grep -q 'gcloud run services describe team123 .*status.url' "$CALL_LOG"
-grep -Fq -- '--update-env-vars=^@^ALLOW_NON_LOCAL_DATABASE=1@APP_ORIGIN=https://team123-hash-uc.a.run.app,https://team123-123456789.asia-southeast1.run.app@APP_COMMIT_SHA=$IMAGE_TAG' "$CALL_LOG"
+grep -Fq -- "--update-env-vars=^@^ALLOW_NON_LOCAL_DATABASE=1@APP_ORIGIN=https://team123-hash-uc.a.run.app,https://team123-123456789.asia-southeast1.run.app@APP_COMMIT_SHA=$IMAGE_TAG" "$CALL_LOG"
 echo 'PASS portal-supplied project number avoids resourcemanager.projects.get and derives both origins'
 
 : > "$CALL_LOG"
@@ -77,7 +77,7 @@ echo 'PASS rollback updates the service without touching the migration job'
 env -u APP_ORIGIN ROLLBACK=true bash "$ROOT/deploy/release.sh" > "$TASK_TMP/derived-origin-output"
 grep -q 'gcloud run services describe team123 .*status.url' "$CALL_LOG"
 grep -q 'gcloud projects describe cpe-se-course-2026 .*projectNumber' "$CALL_LOG"
-grep -Fq -- "--update-env-vars=^@^ALLOW_NON_LOCAL_DATABASE=1@APP_ORIGIN=https://team123-hash-uc.a.run.app,https://team123-123456789.asia-southeast1.run.app" "$CALL_LOG"
+grep -Fq -- "--update-env-vars=^@^ALLOW_NON_LOCAL_DATABASE=1@APP_ORIGIN=https://team123-hash-uc.a.run.app,https://team123-123456789.asia-southeast1.run.app@APP_COMMIT_SHA=$IMAGE_TAG" "$CALL_LOG"
 echo 'PASS release derives both Cloud Run origins with read-only metadata calls when APP_ORIGIN is unset'
 
 for failure in image migration; do
