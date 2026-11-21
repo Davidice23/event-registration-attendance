@@ -37,6 +37,7 @@ is_team_resource "$IMAGE_REPOSITORY" || fail 'IMAGE must use a repository owned 
 [[ "$IMAGE_REPOSITORY" == "$ARTIFACT_REGISTRY_REPOSITORY" ]] || fail 'IMAGE repository must match ARTIFACT_REGISTRY_REPOSITORY from Team resources.'
 IMAGE_BASE="${PORTAL_IMAGE%:*}"
 [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]] || fail 'IMAGE_TAG must be a full 40-character commit SHA.'
+APP_COMMIT_SHA="$IMAGE_TAG"
 [[ "$ROLLBACK" == true || "$ROLLBACK" == false ]] || fail 'ROLLBACK must be true or false.'
 [[ "$DRY_RUN" == 0 || "$DRY_RUN" == 1 ]] || fail 'DRY_RUN must be 0 or 1.'
 
@@ -97,7 +98,7 @@ else
 fi
 
 run_cmd gcloud run services update "$SERVICE_NAME" --image="$DIGEST_IMAGE" \
-  "--update-env-vars=^@^ALLOW_NON_LOCAL_DATABASE=1@APP_ORIGIN=$APP_ORIGIN" \
+  "--update-env-vars=^@^ALLOW_NON_LOCAL_DATABASE=1@APP_ORIGIN=$APP_ORIGIN@APP_COMMIT_SHA=$APP_COMMIT_SHA" \
   --project="$PROJECT_ID" --region="$REGION" --quiet
 run_cmd gcloud run services update-traffic "$SERVICE_NAME" --to-latest \
   --project="$PROJECT_ID" --region="$REGION" --quiet

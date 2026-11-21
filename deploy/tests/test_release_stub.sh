@@ -47,7 +47,7 @@ SERVICE_UPDATE_LINE="$(grep -nF "gcloud run services update team123 --image=$EXP
 test -n "$MIGRATION_EXEC_LINE" && test -n "$SERVICE_UPDATE_LINE"
 test "$MIGRATION_EXEC_LINE" -lt "$SERVICE_UPDATE_LINE"
 grep -Fq "gcloud run jobs update team123-migrate --image=$EXPECTED_DIGEST --command=./node_modules/.bin/prisma --args=migrate,deploy " "$CALL_LOG"
-grep -Fq "gcloud run services update team123 --image=$EXPECTED_DIGEST --update-env-vars=^@^ALLOW_NON_LOCAL_DATABASE=1@APP_ORIGIN=$APP_ORIGIN " "$CALL_LOG"
+grep -Fq "gcloud run services update team123 --image=$EXPECTED_DIGEST --update-env-vars=^@^ALLOW_NON_LOCAL_DATABASE=1@APP_ORIGIN=$APP_ORIGIN@APP_COMMIT_SHA=$IMAGE_TAG " "$CALL_LOG"
 grep -q 'SERVICE_URL=https://team123-hash-uc.a.run.app' "$GITHUB_ENV"
 grep -q 'Deployed commit: 1111111111111111111111111111111111111111' "$TASK_TMP/normal-output"
 echo 'PASS normal release resolves digest, waits for migration, then updates the service'
@@ -59,7 +59,7 @@ if grep -q 'gcloud projects describe ' "$CALL_LOG"; then
   exit 1
 fi
 grep -q 'gcloud run services describe team123 .*status.url' "$CALL_LOG"
-grep -Fq -- '--update-env-vars=^@^ALLOW_NON_LOCAL_DATABASE=1@APP_ORIGIN=https://team123-hash-uc.a.run.app,https://team123-123456789.asia-southeast1.run.app' "$CALL_LOG"
+grep -Fq -- '--update-env-vars=^@^ALLOW_NON_LOCAL_DATABASE=1@APP_ORIGIN=https://team123-hash-uc.a.run.app,https://team123-123456789.asia-southeast1.run.app@APP_COMMIT_SHA=$IMAGE_TAG' "$CALL_LOG"
 echo 'PASS portal-supplied project number avoids resourcemanager.projects.get and derives both origins'
 
 : > "$CALL_LOG"
