@@ -12,6 +12,8 @@ export interface AppOptions {
   prisma?: PrismaClient;
   appOrigin?: string;
   secureCookies?: boolean;
+  /** Deployed commit SHA reported by the health endpoint. */
+  appCommitSha?: string;
   /** Directory of the built React client (`client/dist`). When set, the API also serves the UI. */
   clientDistDir?: string;
 }
@@ -46,6 +48,7 @@ export function createApp(options: AppOptions = {}) {
     }
   }
   const secureCookies = options.secureCookies ?? (process.env.NODE_ENV === "production");
+  const appCommitSha = options.appCommitSha ?? process.env.APP_COMMIT_SHA;
 
   app.disable("x-powered-by");
 
@@ -62,7 +65,7 @@ export function createApp(options: AppOptions = {}) {
     response
       .set("Cache-Control", "no-store")
       .status(200)
-      .json({ data: { status: "ok" } });
+      .json({ data: { status: "ok", ...(appCommitSha ? { commitSha: appCommitSha } : {}) } });
   });
 
   // Readiness: 200 only when the database answers; used by the post-deploy smoke test.

@@ -113,6 +113,7 @@ jobs:
         env:
           SMOKE_EMAIL: ${{ vars.SMOKE_EMAIL }}
           SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+          EXPECTED_COMMIT_SHA: ${{ env.IMAGE_TAG }}
         run: python3 deploy/smoke_test.py "$SERVICE_URL"
 
       - name: Record release evidence
