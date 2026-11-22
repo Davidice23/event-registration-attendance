@@ -1,6 +1,6 @@
 # Lab 5 — Deployment
 
-**Status:** draft started in #17 (cloud-ready). Sections marked _TBD_ are completed by later Lab 5 Issues (#18–#24).
+**Status:** this document is complete for Lab 5. The submission PDF is still pending (#24 stays open until it is submitted). Team resource names come from the Cloud Portal and are recorded in #16; deployment, release and persistence evidence is in #20, #22 and #23.
 
 ## 1. Stack
 
@@ -9,7 +9,7 @@
 | App | React 19 + Vite client, Express 5 + TypeScript API, Prisma 7 with `@prisma/adapter-pg` | None. The API also serves the built client from one container, as in the kit. |
 | Database | PostgreSQL 18 locally; in the cloud, the PostgreSQL database the course Cloud portal provisions for the team | The team does **not** create its own Cloud SQL instance (course announcement) |
 | Hosting | Cloud Run, images in Artifact Registry | None |
-| Secrets | Runtime secrets in the team's portal-provided resources _(recorded in #20)_; pipeline settings in GitHub Actions secrets/variables | Whatever the portal provides; the team creates no secrets outside it |
+| Secrets | Runtime secrets in Secret Manager, provisioned by the portal: `sbdec8d5b-database-url`, `sbdec8d5b-admin-password`, `sbdec8d5b-demo-password` (names only, see §6); pipeline settings in the GitHub environment `demo` | Whatever the portal provides; the team creates no secrets outside it |
 | CI/CD | GitHub Actions with Workload Identity Federation | None |
 
 ## 2. Cloud-ready checklist (#17)
@@ -33,16 +33,16 @@ Placeholders only. Never commit real values.
 
 | Variable | Purpose | Secret? | Local value comes from | Cloud value comes from |
 |---|---|---|---|---|
-| `DATABASE_URL` | PostgreSQL connection string | **Yes** | `.env` (local dev DB on 127.0.0.1:5433) | Provided for the team's resources by the course Cloud portal _(name and source to be recorded in #20)_ |
+| `DATABASE_URL` | PostgreSQL connection string | **Yes** | `.env` (local dev DB on 127.0.0.1:5433) | Secret Manager secret `sbdec8d5b-database-url` (provisioned by the course Cloud Portal). The Cloud Run service and migration job configuration holds only a reference to this secret; Cloud Run reads the secret and injects its value into the `DATABASE_URL` environment variable when the container starts. The connection string is never stored as plaintext in the Cloud Run configuration, in Git, or in the image. |
 | `TEST_DATABASE_URL` | Dedicated local test DB for integration/E2E tests | Local-only placeholder | `.env` (127.0.0.1:5434) | Not used. CI sets throw-away values for its PostgreSQL service container. |
 | `ALLOW_NON_LOCAL_DATABASE` | Allows a non-loopback database (Cloud SQL, Compose) | No | Unset | Cloud Run env `1` |
 | `NODE_ENV` | `production` enables `Secure` cookies and fail-fast DB startup | No | `development` | Cloud Run env `production` |
-| `APP_ORIGIN` | Origin(s) allowed for `POST` (CSRF check); one origin or a comma-separated list, each matched exactly | No | `http://127.0.0.1:5173` | Cloud Run env: every URL the service is served at, comma-separated (Cloud Run gives a service a `https://SERVICE-PROJECT_NUMBER.REGION.run.app` URL and a hash-style `…a.run.app` URL) _(values recorded in #20)_ |
+| `APP_ORIGIN` | Origin(s) allowed for `POST` (CSRF check); one origin or a comma-separated list, each matched exactly | No | `http://127.0.0.1:5173` | Cloud Run env: every URL the service is served at, comma-separated (Cloud Run gives a service a `https://SERVICE-PROJECT_NUMBER.REGION.run.app` URL and a hash-style `…a.run.app` URL). Set by `deploy/release.sh` to `https://sbdec8d5b-4d7hbszvwq-as.a.run.app,https://sbdec8d5b-670075229477.asia-southeast1.run.app` |
 | `PORT` | Listen port | No | `3001` | Set by Cloud Run |
 | `HOST` | Listen address | No | `127.0.0.1` | `0.0.0.0` |
 | `CLIENT_DIST_DIR` | Built client served by the API | No | Unset (Vite dev server) | `/app/client/dist` |
-| `ALLOW_DEMO_SEED` | Opt-in for the seed commands | No | `0` | `1` on the migration job only |
-| `DEMO_SEED_PASSWORD` | Password for the four demo accounts (≥ 12 chars) | **Yes** | `.env`, local-only | A secret in the team's portal-provided resources, readable by the migration/seed job only _(recorded in #20)_; shared with the Lab 6 partner team privately |
+| `ALLOW_DEMO_SEED` | Opt-in for the seed commands | No | `0` | Not set on the service or on the release migration job `sbdec8d5b-migrate`; the release only runs `prisma migrate deploy`. Needed only for a one-off seed run outside the release pipeline. |
+| `DEMO_SEED_PASSWORD` | Password for the four demo accounts (≥ 12 chars) | **Yes** | `.env`, local-only | Secret Manager secret `sbdec8d5b-demo-password`, provisioned by the portal. Not attached to the service or the release migration job; used only by a one-off seed run outside the release pipeline. Shared with the Lab 6 partner team privately. |
 | `ALLOW_TEST_DB_RESET` | Opt-in for `npm run db:reset:test` | No | `0` | Not used |
 | `POSTGRES_PASSWORD`, `COMPOSE_PROJECT_NAME` | Local Docker Compose database | Local-only placeholder | `.env` | Not used |
 | `API_PROXY_TARGET`, `E2E_DATABASE_URL`, `E2E_BROWSER_CHANNEL` | Vite proxy target and Playwright E2E settings | No | Set by `npm run test:e2e` | Not used |
@@ -67,7 +67,7 @@ Placeholders only. Never commit real values.
 | Stop containers, keep local database volume | `docker compose down` |
 | Apply migrations only | `docker compose run --build --rm migrate` |
 | Seed demo accounts (opt-in only) | Set `ALLOW_DEMO_SEED=1` and a local-only `DEMO_SEED_PASSWORD` in `.env`, then `docker compose --profile seed run --build --rm seed` |
-| Migrate + seed (cloud) | Inside the image: `./node_modules/.bin/prisma migrate deploy`, then `node server/dist/seed.js` when demo accounts are wanted (`ALLOW_DEMO_SEED=1`, `DEMO_SEED_PASSWORD`). Where and how it runs on the portal-provided resources: _recorded in #20_ |
+| Migrate + seed (cloud) | Migrate: every release updates the Cloud Run job `sbdec8d5b-migrate` to the release image with command `./node_modules/.bin/prisma migrate deploy` and executes it before the service update (§7). This job has no `ALLOW_DEMO_SEED` or `DEMO_SEED_PASSWORD`. Seed: the image also contains `node server/dist/seed.js` (needs `ALLOW_DEMO_SEED=1` and `DEMO_SEED_PASSWORD`), but the pipeline never runs it. The four demo accounts were seeded once, separately from the release pipeline; the TA confirmed that they exist on the Cloud database and that login works (#20). |
 
 ## 5. Container image and local Compose (Issue #18)
 
@@ -91,7 +91,23 @@ Wait for **Resources ready**, then copy the exact prefix, service name, migratio
 
 The original Starter Kit `deploy/deploy.sh` created APIs, Cloud SQL, IAM, secrets, and Cloud Run resources. **That script must not be used.** This repository's adapted `deploy/deploy.sh` only verifies the exact portal-provisioned resources, builds/pushes the application image, and delegates to `deploy/release.sh` to update the existing migration job and service. Neither script creates/deletes resources, enables APIs, changes IAM or billing, reads secret values, or runs teardown. Never run the Starter Kit's `teardown.sh`.
 
-_Record in Issue #20 from Team resources (names only, never secret values):_ project ID `cpe-se-course-2026`, region `asia-southeast1`, team prefix, Cloud SQL instance and connection method, image registry, Cloud Run service and migration job names, service URLs, names/source of runtime secrets, and each member's access. Do not claim resources are ready until the portal says so.
+**Team resources** (copied from the portal's Team resources page, names only, recorded in #16):
+
+| Resource | Name |
+|---|---|
+| Project / project number | `cpe-se-course-2026` / `670075229477` |
+| Region | `asia-southeast1` |
+| Team prefix | `sbdec8d5b` |
+| Cloud Run service | `sbdec8d5b` |
+| Service URLs | `https://sbdec8d5b-4d7hbszvwq-as.a.run.app`, `https://sbdec8d5b-670075229477.asia-southeast1.run.app` |
+| Migration job | `sbdec8d5b-migrate` |
+| Cloud SQL for PostgreSQL | instance `sbdec8d5b-pg` (`db-f1-micro`); database and user `sbdec8d5b` |
+| Artifact Registry | repository `sbdec8d5b`; image `asia-southeast1-docker.pkg.dev/cpe-se-course-2026/sbdec8d5b/sbdec8d5b` |
+| Runtime service account | `sbdec8d5b-runner@cpe-se-course-2026.iam.gserviceaccount.com` |
+| Deployer service account (GitHub WIF) | `sbdec8d5b-deployer@cpe-se-course-2026.iam.gserviceaccount.com` |
+| Secret Manager secrets | `sbdec8d5b-database-url`, `sbdec8d5b-admin-password`, `sbdec8d5b-demo-password` |
+
+**Access:** Cloud Console and Cloud Shell use the team account registered in the portal (Davidice23). The group owner invites other members from the portal; accounts and passwords are never shared. GitHub deploys through Workload Identity Federation with the deployer service account, with no JSON key. Billing and budgets belong to the course project, so the team creates no budget and changes no billing setting.
 
 **App settings that do not depend on the portal:**
 - The image listens on `PORT` (Cloud Run sets it).
