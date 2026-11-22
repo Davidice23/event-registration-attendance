@@ -33,7 +33,7 @@ Placeholders only. Never commit real values.
 
 | Variable | Purpose | Secret? | Local value comes from | Cloud value comes from |
 |---|---|---|---|---|
-| `DATABASE_URL` | PostgreSQL connection string | **Yes** | `.env` (local dev DB on 127.0.0.1:5433) | Environment variable `DATABASE_URL` on the service and migration job, whose value is a Secret Manager reference to `sbdec8d5b-database-url` (provisioned by the course Cloud Portal). The connection string is never stored as a plaintext env value, in Git, or in the image. |
+| `DATABASE_URL` | PostgreSQL connection string | **Yes** | `.env` (local dev DB on 127.0.0.1:5433) | Secret Manager secret `sbdec8d5b-database-url` (provisioned by the course Cloud Portal). The Cloud Run service and migration job configuration holds only a reference to this secret; Cloud Run reads the secret and injects its value into the `DATABASE_URL` environment variable when the container starts. The connection string is never stored as plaintext in the Cloud Run configuration, in Git, or in the image. |
 | `TEST_DATABASE_URL` | Dedicated local test DB for integration/E2E tests | Local-only placeholder | `.env` (127.0.0.1:5434) | Not used. CI sets throw-away values for its PostgreSQL service container. |
 | `ALLOW_NON_LOCAL_DATABASE` | Allows a non-loopback database (Cloud SQL, Compose) | No | Unset | Cloud Run env `1` |
 | `NODE_ENV` | `production` enables `Secure` cookies and fail-fast DB startup | No | `development` | Cloud Run env `production` |
