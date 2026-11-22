@@ -41,8 +41,8 @@ Placeholders only. Never commit real values.
 | `PORT` | Listen port | No | `3001` | Set by Cloud Run |
 | `HOST` | Listen address | No | `127.0.0.1` | `0.0.0.0` |
 | `CLIENT_DIST_DIR` | Built client served by the API | No | Unset (Vite dev server) | `/app/client/dist` |
-| `ALLOW_DEMO_SEED` | Opt-in for the seed commands | No | `0` | `1` on the migration job only |
-| `DEMO_SEED_PASSWORD` | Password for the four demo accounts (≥ 12 chars) | **Yes** | `.env`, local-only | Secret Manager secret `sbdec8d5b-demo-password`, provisioned by the portal; used only when seeding; shared with the Lab 6 partner team privately |
+| `ALLOW_DEMO_SEED` | Opt-in for the seed commands | No | `0` | Not set on the service or on the release migration job `sbdec8d5b-migrate`; the release only runs `prisma migrate deploy`. Needed only for a one-off seed run outside the release pipeline. |
+| `DEMO_SEED_PASSWORD` | Password for the four demo accounts (≥ 12 chars) | **Yes** | `.env`, local-only | Secret Manager secret `sbdec8d5b-demo-password`, provisioned by the portal. Not attached to the service or the release migration job; used only by a one-off seed run outside the release pipeline. Shared with the Lab 6 partner team privately. |
 | `ALLOW_TEST_DB_RESET` | Opt-in for `npm run db:reset:test` | No | `0` | Not used |
 | `POSTGRES_PASSWORD`, `COMPOSE_PROJECT_NAME` | Local Docker Compose database | Local-only placeholder | `.env` | Not used |
 | `API_PROXY_TARGET`, `E2E_DATABASE_URL`, `E2E_BROWSER_CHANNEL` | Vite proxy target and Playwright E2E settings | No | Set by `npm run test:e2e` | Not used |
@@ -67,7 +67,7 @@ Placeholders only. Never commit real values.
 | Stop containers, keep local database volume | `docker compose down` |
 | Apply migrations only | `docker compose run --build --rm migrate` |
 | Seed demo accounts (opt-in only) | Set `ALLOW_DEMO_SEED=1` and a local-only `DEMO_SEED_PASSWORD` in `.env`, then `docker compose --profile seed run --build --rm seed` |
-| Migrate + seed (cloud) | Inside the image: `./node_modules/.bin/prisma migrate deploy`, then `node server/dist/seed.js` when demo accounts are wanted (`ALLOW_DEMO_SEED=1`, `DEMO_SEED_PASSWORD`). Migrations run in the Cloud Run job `sbdec8d5b-migrate`, which every release updates to the release image and executes before the service update (§7). The pipeline does not seed; the TA confirmed that the four demo accounts exist on the Cloud database and that login works (#20). |
+| Migrate + seed (cloud) | Migrate: every release updates the Cloud Run job `sbdec8d5b-migrate` to the release image with command `./node_modules/.bin/prisma migrate deploy` and executes it before the service update (§7). This job has no `ALLOW_DEMO_SEED` or `DEMO_SEED_PASSWORD`. Seed: the image also contains `node server/dist/seed.js` (needs `ALLOW_DEMO_SEED=1` and `DEMO_SEED_PASSWORD`), but the pipeline never runs it. The four demo accounts were seeded once, separately from the release pipeline; the TA confirmed that they exist on the Cloud database and that login works (#20). |
 
 ## 5. Container image and local Compose (Issue #18)
 
