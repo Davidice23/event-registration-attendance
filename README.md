@@ -1,6 +1,6 @@
 # Event Registration and Attendance
 
-CPE334 Group Project — Theme 3: Event Registration and Attendance System. Sprint 1 implements authenticated Organizer and Participant workflows for publishing/discovering events, registering with duplicate/capacity protection, viewing personal registrations, and reading an owner-scoped Organizer roster. The implementation is on `staging`; it is **not yet a reviewed release on `main`**.
+CPE334 Group Project — Theme 3: Event Registration and Attendance System. Sprint 1 implements authenticated Organizer and Participant workflows for publishing/discovering events, registering with duplicate/capacity protection, viewing personal registrations, and reading an owner-scoped Organizer roster. The Sprint 1 implementation was released to `main` in reviewed PR #14; Lab 5 deployment and CI/CD changes are developed on `staging` and promoted through separate reviewed release PRs.
 
 ## Prerequisites
 
