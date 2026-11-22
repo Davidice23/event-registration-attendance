@@ -1,6 +1,6 @@
 # Lab 5 — Deployment
 
-**Status:** complete for Lab 5 (#17–#24). Team resource names come from the Cloud Portal and are recorded in #16; deployment, release and persistence evidence is in #20, #22 and #23.
+**Status:** this document is complete for Lab 5. The submission PDF is still pending (#24 stays open until it is submitted). Team resource names come from the Cloud Portal and are recorded in #16; deployment, release and persistence evidence is in #20, #22 and #23.
 
 ## 1. Stack
 
@@ -33,7 +33,7 @@ Placeholders only. Never commit real values.
 
 | Variable | Purpose | Secret? | Local value comes from | Cloud value comes from |
 |---|---|---|---|---|
-| `DATABASE_URL` | PostgreSQL connection string | **Yes** | `.env` (local dev DB on 127.0.0.1:5433) | Secret Manager secret `sbdec8d5b-database-url`, provisioned by the course Cloud Portal and attached to the service and migration job as a Secret reference (never an env value) |
+| `DATABASE_URL` | PostgreSQL connection string | **Yes** | `.env` (local dev DB on 127.0.0.1:5433) | Environment variable `DATABASE_URL` on the service and migration job, whose value is a Secret Manager reference to `sbdec8d5b-database-url` (provisioned by the course Cloud Portal). The connection string is never stored as a plaintext env value, in Git, or in the image. |
 | `TEST_DATABASE_URL` | Dedicated local test DB for integration/E2E tests | Local-only placeholder | `.env` (127.0.0.1:5434) | Not used. CI sets throw-away values for its PostgreSQL service container. |
 | `ALLOW_NON_LOCAL_DATABASE` | Allows a non-loopback database (Cloud SQL, Compose) | No | Unset | Cloud Run env `1` |
 | `NODE_ENV` | `production` enables `Secure` cookies and fail-fast DB startup | No | `development` | Cloud Run env `production` |
@@ -107,7 +107,7 @@ The original Starter Kit `deploy/deploy.sh` created APIs, Cloud SQL, IAM, secret
 | Deployer service account (GitHub WIF) | `sbdec8d5b-deployer@cpe-se-course-2026.iam.gserviceaccount.com` |
 | Secret Manager secrets | `sbdec8d5b-database-url`, `sbdec8d5b-admin-password`, `sbdec8d5b-demo-password` |
 
-**Access:** Cloud Console and Cloud Shell use the team account registered in the portal (Davidice23). Other members are added only through a TA; accounts and passwords are never shared. GitHub deploys through Workload Identity Federation with the deployer service account, with no JSON key. Billing and budgets belong to the course project, so the team creates no budget and changes no billing setting.
+**Access:** Cloud Console and Cloud Shell use the team account registered in the portal (Davidice23). The group owner invites other members from the portal; accounts and passwords are never shared. GitHub deploys through Workload Identity Federation with the deployer service account, with no JSON key. Billing and budgets belong to the course project, so the team creates no budget and changes no billing setting.
 
 **App settings that do not depend on the portal:**
 - The image listens on `PORT` (Cloud Run sets it).
