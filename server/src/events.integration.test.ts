@@ -171,7 +171,7 @@ describe("Sprint 1 F-02 / F-04 — Publish, Discover & Organizer Roster", () => 
         return Reflect.get(target, property);
       },
     });
-    const failingServer = createServer(createApp({ prisma: failingPrisma, appOrigin, secureCookies: false }));
+    const failingServer = createServer(createApp({ prisma: failingPrisma, appOrigin, secureCookies: false, clock: () => suiteNow }));
     await new Promise<void>(resolve => failingServer.listen(0, "127.0.0.1", resolve));
     const address = failingServer.address();
     if (!address || typeof address === "string") throw new Error("Expected a loopback test server address.");
