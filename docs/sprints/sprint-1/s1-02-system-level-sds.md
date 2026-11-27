@@ -24,6 +24,10 @@ PostgreSQL: Users, Sessions, Events, Registrations
 - พัฒนาผ่าน proxy `/api` ของ Vite เพื่อให้ browser เรียก origin เดียว; production เสนอให้ Express เสิร์ฟ static build ของ UI และ API ผ่าน origin เดียว ไม่เปิด CORS ข้าม origin เป็นค่าเริ่มต้น
 - React/Vite + Express/TypeScript + PostgreSQL/Prisma ตาม D-06 ช่วยให้ reuse แนวทาง deployment ได้ แต่ไม่ใช้โค้ดโดเมน TokTickIT กำหนดและล็อกเวอร์ชัน Node/npm/DB/Prisma จากสิ่งที่ติดตั้งและ build ได้จริงเมื่อเริ่ม scaffold พร้อม lockfile เดียวที่ root
 
+### Application clock สำหรับ BR-06 (Lab 7 CR #49)
+
+การตรวจเวลาเผยแพร่ล่วงหน้า 24 ชั่วโมงใช้ instant ฝั่ง application ที่กำหนดเป็น `T` ต่อ request โดยส่ง clock ผ่าน `createApp(options)` → events router → validator/service; production default คือ `Date.now()` ของ application instance ที่รับ request ไม่ใช้เวลาจาก browser หรือ PostgreSQL `now()`. เปรียบเทียบ `startsAt` หลังตรวจรูปแบบ/offset และ parse เป็น UTC instant ที่ความละเอียดมิลลิวินาทีของ JavaScript `Date`; ต้องผ่านเมื่อ `startsAt - T >= 24h`. clock ที่ฉีดได้ทำให้ unit, integration และ API tests กำหนด boundary ซ้ำได้. กฎนี้ไม่เพิ่ม field/table, ไม่ต้อง migration และไม่เปลี่ยน timezone ที่ UI ใช้แสดง (`Asia/Bangkok`); เป็น design contract ที่ยังต้อง implement/review ไม่ใช่หลักฐานว่าโค้ดทำแล้ว.
+
 ## 2. โมเดลข้อมูลและกฎที่เก็บในฐานข้อมูล
 
 | Entity | ฟิลด์หลัก | ความสัมพันธ์/ข้อจำกัด |
@@ -63,7 +67,7 @@ PostgreSQL: Users, Sessions, Events, Registrations
 
 ## 4. ข้อตกลง API และการเก็บข้อมูลอย่างปลอดภัย
 
-- prefix `/api`; success เป็น `{"data": ...}` ยกเว้น `204` ไม่มี body; error เป็น `{"error":{"code":"...","message":"..."}}` อาจมี `fields` เฉพาะ validation. ใช้ `401` เมื่อไม่มี session, `403` เมื่อผิดบทบาท, `404` เมื่อไม่พบ/ไม่ใช่เจ้าของใน roster, `409` เมื่อผิดกฎการสมัคร; รายละเอียดราย route ใน Feature Contracts
+- prefix `/api`; success เป็น `{"data": ...}` ยกเว้น `204` ไม่มี body; error เป็น `{"error":{"code":"...","message":"..."}}` อาจมี `fields` เฉพาะ validation. ใช้ `401` เมื่อไม่มี session, `403` เมื่อผิดบทบาท, `404` เมื่อไม่พบ/ไม่ใช่เจ้าของใน roster, `409` เมื่อผิดกฎการสมัคร; รายละเอียดราย route ใน Feature Contracts. สำหรับ BR-06, `POST /api/events` ที่วันที่ parse ถูกต้องแต่ lead time ต่ำกว่า 24 ชั่วโมงตอบ `400 VALIDATION_ERROR` และ `fields.startsAt` เป็นข้อความ lead-time เฉพาะ (แยกจาก format/offset error); API เป็นผู้บังคับกฎและต้องไม่มี Event ใหม่
 - ตรวจ body/query/UUID ตามสัญญาและไม่ใช้ค่าจาก client เพื่อเลือกเจ้าของ. ใช้ลำดับรายการที่แน่นอนด้วยวันเวลาแล้วตาม ID; UI รับข้อมูลจาก DTO ที่ระบุฟิลด์ ไม่ส่ง DB model ดิบ
 - ไม่ log body ของ auth, cookie, password, connection string หรือ stack trace ใน response. DB/transaction ล้มเหลวให้ข้อความทั่วไปและไม่เดาว่ากิจกรรมเต็ม; หากไม่รู้ผลการสมัคร ให้ผู้ใช้โหลดรายการของตนก่อนตัดสินใจลองใหม่
 
@@ -90,4 +94,5 @@ Cloud Run + Artifact Registry + Cloud SQL for PostgreSQL + Secret Manager เป
 - ตรวจความสอดคล้องของ permission matrix, DTO, วันเวลา และ capacity/duplicate precedence กับสัญญา F-01–F-04; ทีมบันทึกคำยืนยัน/ข้อแก้ไขจริงสำหรับ **S1-02** แยกจากการอนุมัติ S1-01
 - **เอกสารเข้า repository แล้ว:** v0.2 ถูกรีวิวและ merge เข้า `staging` ผ่าน PR #1 เพื่อเก็บ contract history ก่อน implementation; implementation ยังต้องทำผ่าน Issue/feature branch/PR ตามลำดับ. สำหรับ Lab 5 ใช้ Sprint 1 release ที่ทดสอบและรีวิวแล้วบน `main` พร้อม tag/SHA เท่านั้น
 - **แก้ไขหลัง audit v0.2:** ทำ T-09 ให้พิสูจน์การแย่ง lock แบบกำหนดจังหวะได้, ทำ T-10 ให้มีข้อมูลของผู้ใช้ทั้งสองฝั่งและตรวจ owner scope, ขยาย negative coverage ของ auth/CSRF, ทำ DoD ให้มีคู่มือและหลักฐานที่ทำซ้ำได้, และแยก Lab 5 R/C เป็นเกณฑ์ภายหลังที่ต้องพิสูจน์จริง. การแก้เอกสารนี้ยังไม่ใช่ implementation/test evidence
+- **Change record — Lab 7 CR #49 (28 พ.ย. 2026):** S1-01 BR-06 และ F-02/AC-13/T-05b/T-06b เพิ่มบน accepted baseline `lab5-sec131-punice-final` → `b56826459da848342028a5b93e885f9cceaa3dcd`; pre-change implementation คือ `staging` → `c2d5aea2ad2249064e3f950ea05a4b129687050f`. Khawpun124 เห็นชอบแผนใน Issue #49; การรีวิว docs diff จริงอยู่ใน draft PR ก่อน test/code. ไม่มี migration.
 - แหล่งข้อกำหนด: Group Work Specification §6, §8; Project Deliverable 1 §§3.3, 3.5–3.6; Lab 5 updated handout §4

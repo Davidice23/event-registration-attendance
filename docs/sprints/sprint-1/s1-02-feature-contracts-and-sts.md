@@ -4,6 +4,8 @@
 **ใช้คู่กับ:** [S1-01 baseline](s1-01-product-scope-and-baseline.md) และ [System-Level SDS](s1-02-system-level-sds.md)<br>
 **ขอบเขต:** เอกสารนี้เป็นสัญญาและ expected behavior สำหรับ implementation; ใช้ test IDs เดิมเทียบกับ test files/results จริงด้านล่างและใน PR ที่เกี่ยวข้อง
 
+**Amendment record — Lab 7 CR #49 (v0.3; 28 พ.ย. 2026):** เพิ่ม BR-06/AC-13 และการทดสอบเวลาเผยแพร่ล่วงหน้า 24 ชั่วโมง โดยอ้าง baseline ที่ยอมรับแล้ว `lab5-sec131-punice-final` → `b56826459da848342028a5b93e885f9cceaa3dcd`; pre-change implementation คือ `staging` → `c2d5aea2ad2249064e3f950ea05a4b129687050f`. Khawpun124 เห็นชอบขอบเขตและแผนใน Issue #49 comment v2; การรีวิวเนื้อหาเอกสารฉบับแก้ใน PR นี้ยังรออยู่. PR นี้เป็น docs-only ก่อน test และ implementation.
+
 ## 1. ข้อตกลงร่วม
 
 - API ทุก route ด้านล่างอยู่ใต้ `/api`; success `{"data": ...}` และ errors `{"error":{"code":"...","message":"..."}}`; `204` ไม่มี body. `GET` ไม่แก้ข้อมูล. `POST` รับ JSON object; routes ที่ไม่ต้องใช้ข้อมูลให้ส่ง `{}`. ปฏิเสธ field/query ที่ไม่ประกาศ, JSON ผิดรูปหรือ UUID ผิดด้วย `400 VALIDATION_ERROR`
@@ -32,8 +34,8 @@
 
 ## 3. F-02 — Publish & Discover
 
-**Trace:** FR-02, BR-01, BR-04, NFR-01, NFR-02 | **พึ่งพา:** F-01 และ Event migration<br>
-**UI:** Organizer กรอกชื่อ รายละเอียด วันเวลา สถานที่และจำนวนที่นั่ง; หลัง API ยืนยันแสดงกิจกรรมในรายการของผู้จัด. Participant เห็นกิจกรรมที่เผยแพร่ใน `/events`; แสดง `Asia/Bangkok` และจำนวนรับ ไม่รับประกันว่ายังเหลือที่นั่งจนกว่าจะสมัครสำเร็จ
+**Trace:** FR-02, BR-01, BR-04, BR-06, NFR-01, NFR-02 | **พึ่งพา:** F-01 และ Event migration<br>
+**UI:** Organizer กรอกชื่อ รายละเอียด วันเวลา สถานที่และจำนวนที่นั่ง; หลัง API ยืนยันแสดงกิจกรรมในรายการของผู้จัด. Participant เห็นกิจกรรมที่เผยแพร่ใน `/events`; แสดง `Asia/Bangkok` และจำนวนรับ ไม่รับประกันว่ายังเหลือที่นั่งจนกว่าจะสมัครสำเร็จ. เมื่อ server ปฏิเสธเพราะเวลาเริ่มใกล้กว่า 24 ชั่วโมง ให้แสดงข้อความเฉพาะ `เวลาเริ่มต้องห่างจากตอนนี้อย่างน้อย 24 ชั่วโมง`; ไม่แสดง success และไม่ล้างฟอร์ม
 
 | API | Input / สิทธิ์ | ผลที่คาด |
 |---|---|---|
@@ -41,13 +43,14 @@
 | `GET /api/events` | Participant; ไม่มี query | `200` + `EventSummary[]`; เรียง `startsAt ASC,id ASC` |
 | `GET /api/organizer/events` | Organizer; ไม่มี query | `200` + `EventSummary[]` ของเจ้าของปัจจุบันเท่านั้น; เรียงแบบเดียวกัน |
 
-**Validation/Data:** trim แล้ว `title` 1–120, `description` 1–1,000, `location` 1–160 ตัวอักษร (ความยาว string แบบเดียวกันที่ API); `startsAt` เป็นวันเวลาที่ parse/ตรวจปฏิทินได้พร้อม offset/`Z`; `capacity` เป็น JSON number จำนวนเต็ม 1–2,147,483,647 (ขอบเขต DB integer; ไม่แปลง string ใน API). UI แปลงค่าฟอร์มและวันเวลาจาก `Asia/Bangkok` ให้ถูกต้อง. Event มี FK `organizerId` และ `CHECK (capacity > 0)`; ไม่สร้าง draft, deadline หรือฟีเจอร์แก้ไข
+**Validation/Data:** trim แล้ว `title` 1–120, `description` 1–1,000, `location` 1–160 ตัวอักษร (ความยาว string แบบเดียวกันที่ API); ตรวจ `startsAt` ว่าเป็นวันเวลาที่ parse/ตรวจปฏิทินได้พร้อม offset/`Z` ก่อน แล้วจึงเปรียบเทียบ instant ที่ parse แล้วกับ application clock `T` ที่รับ request: ต้องมี `startsAt - T >= 24h` (เท่ากับ 24 ชั่วโมงผ่าน). ใช้ความละเอียดมิลลิวินาทีของ JavaScript `Date`; ไม่ใช้ clock ของ client หรือ DB. ถ้ารูปแบบถูกต้องแต่ lead time ไม่ถึง ให้ `400 VALIDATION_ERROR` และ `fields.startsAt` เป็นข้อความเฉพาะที่ต่างจากข้อความรูปแบบวันเวลาผิด; ห้ามสร้าง Event. `capacity` เป็น JSON number จำนวนเต็ม 1–2,147,483,647 (ขอบเขต DB integer; ไม่แปลง string ใน API). UI แปลงค่าฟอร์มและวันเวลาจาก `Asia/Bangkok` ให้ถูกต้อง. Event มี FK `organizerId` และ `CHECK (capacity > 0)`; ไม่สร้าง draft, registration deadline (F-06) หรือฟีเจอร์แก้ไข
 
 | AC | ผลที่ต้องสังเกตได้ |
 |---|---|
 | AC-04 | Organizer เผยแพร่แล้วอ่าน event เดิมได้; Participant เห็น event นั้น; Organizer คนอื่นไม่เห็นในรายการของตน |
 | AC-05 | ค่าผิด/ขอบเขตผิดได้ `400` และไม่สร้าง event; capacity 1 ผ่าน |
 | AC-06 | Participant/anonymous เผยแพร่ไม่ได้; Organizer ส่ง owner ที่แอบอ้างไม่ได้; ไม่มีแถวหรือข้อมูลส่วนตัวรั่ว |
+| AC-13 | เมื่อเวลา server เป็น `T` Organizer เผยแพร่ `startsAt = T + 24h` ได้ `201` และมี Event ใหม่หนึ่งแถว ถ้า `startsAt = T + 24h − 1 ms` หรือเป็นเวลาในอดีต ได้ `400 VALIDATION_ERROR` โดย `fields.startsAt` เป็นข้อความเรื่อง lead time ซึ่งต่างจากข้อความรูปแบบวันเวลาผิด และไม่มีแถวใหม่ UI แสดง `เวลาเริ่มต้องห่างจากตอนนี้อย่างน้อย 24 ชั่วโมง` ไม่แสดง success และไม่ล้างฟอร์ม |
 
 ## 4. F-03 — Register & My Registrations
 
@@ -96,6 +99,8 @@
 | T-04 | API/DB / AC-04 | Organizer A เผยแพร่; Participant A เปิดรายการ; Organizer A/B เปิดรายการผู้จัด | `201` และอ่าน ID เดิม; A เห็นในรายการผู้จัด, B ไม่เห็น |
 | T-05 | Unit / AC-05 | ส่ง capacity 0, -1, 1.5, `"1"`, 2,147,483,648, 1 เข้าตัวตรวจ; เพิ่มวันที่ผิด/ไม่มี offset | ค่าผิดถูกปฏิเสธ; 1 และวันเวลาที่มี offset ถูกต้องผ่าน |
 | T-06 | API/DB / AC-05, AC-06 | POST capacity ผิด, Participant/anonymous POST, Organizer ใส่ `organizerId` ของ B | `400`/`403`/`401` ตามกรณี; ไม่เกิด Event ใหม่และ error ไม่รั่วข้อมูล |
+| T-05b | Unit / AC-13 | ตรึง application clock เป็น `T`; ตรวจวันที่มี offset ที่ `T+24h`, `T+24h−1ms` และเวลาในอดีต; เปรียบเทียบ lead-time error กับ invalid-date error | `T+24h` ผ่าน; ค่าต่ำกว่าขอบเขต 1 ms และเวลาในอดีตไม่ผ่านด้วย `fields.startsAt` ข้อความ lead-time ที่แยกจากข้อความ format/offset error; ไม่อ้าง DB write จาก unit test |
+| T-06b | API/DB / AC-13 | ใช้ Organizer และ clock `T` ที่ตรึงผ่าน `createApp(options)`; POST ที่ `T+24h`, `T+24h−1ms` และเวลาในอดีต; อ่าน DB ก่อน/หลัง | exact boundary ได้ `201` และเพิ่มหนึ่ง Event; ค่าต่ำกว่า boundary/เวลาในอดีตได้ `400 VALIDATION_ERROR`, `fields.startsAt` เป็นข้อความ lead-time และไม่มีแถวใหม่จาก request ที่ถูกปฏิเสธ |
 | T-07 | API/DB / AC-07 | Participant A สมัคร event ที่มีที่นั่ง; GET รายการด้วย request ใหม่; ลอง UUID ที่ไม่มีจริง | `201`, GET พบ ID เดิม; event ไม่พบ `404` และไม่เพิ่มแถว |
 | T-08 | API/DB / AC-08 | สมัคร event capacity 1 สำเร็จแล้วส่งซ้ำ; ทดสอบอีก event ด้วยคำขอคู่ของ Participant เดียวกัน | คำขอซ้ำได้ `409 ALREADY_REGISTERED` แม้เต็ม; แต่ละ event มีแถวของ A หนึ่งเท่านั้น |
 | T-09 | API/DB / AC-09 | Seed Event capacity 2 โดยมี Registration เดิมหนึ่งรายการของ Participant C; A/B ยังไม่เคยสมัคร Event นี้. ให้ controller connection ล็อกแถว Event เป้าหมาย แล้วส่งคำขอสมัครผ่าน route จริงจาก A/B คนละ session. ใช้ test-only DB instrumentation ผูกคำขอและ backend PID ที่ต่างกันเข้ากับคำสั่งล็อก Event ID เดียวกัน; ก่อนปล่อยล็อก ยืนยันว่าทั้งสอง PID กำลังรอ โดยเส้นทางตัวบล็อกของแต่ละ PID ไปถึง controller ได้ทั้งโดยตรงหรือผ่านอีกคำขอในคิวเดียวกัน (เช่น ไล่จาก `pg_blocking_pids()`). จัด connection ให้เพียงพอสำหรับ controller, ทั้งสองคำขอ และตัวสังเกตถ้าแยก connection | ถ้ายืนยันการรอของทั้งคู่บน Event เดียวกันไม่ได้ให้ test fail; การเริ่ม Promise พร้อมกันไม่ใช่หลักฐาน. หลังปล่อยล็อกต้องได้หนึ่ง `201` และหนึ่ง `409 EVENT_FULL` โดยไม่กำหนดผู้ชนะ; แถวเดิมยังอยู่ เพิ่มเพียงหนึ่งแถวของผู้ชนะ และจำนวนรวมเท่ากับ capacity. ให้คนที่แพ้ลองอีกครั้งแล้วต้องได้ `409 EVENT_FULL` โดยยอดไม่เปลี่ยน. ตั้ง timeout และปล่อยล็อก/rollback controller กับคืน connection ที่ใช้ทดสอบใน `finally` |
@@ -105,6 +110,14 @@
 | T-13 | Browser E2E / AC-01, AC-03, AC-04, AC-07, AC-11 | Organizer A login/เผยแพร่ → logout → Participant A login/สมัคร/refresh รายการ → logout → Organizer A login/เปิด roster | มองเห็น journey ครบใน UI, event และรายการตรงกันหลัง refresh, roster ถูกคน; logout แล้วกลับหน้าที่ต้อง login ไม่ได้โดยไม่ auth ใหม่ |
 | T-14 | Browser E2E / AC-08, AC-12 | Participant สมัคร event เดิมซ้ำ; เปิด URL roster ของ Organizer; ใช้ข้อมูลทดสอบที่รู้ล่วงหน้า | UI แสดงเหตุผลสมัครซ้ำและไม่เพิ่มรายการ; URL ต้องไม่แสดง roster ที่ไม่ได้รับสิทธิ์ (API negative tests ยังจำเป็น) |
 
+**Lab 7 CR #49 — impact / traceability:**
+
+| Requirement | SRS / SDS / Feature Contract | Acceptance / STS | Code / fixture ที่ต้องประเมินและทดสอบ |
+|---|---|---|---|
+| `BR-06` ผ่าน `FR-02` / `F-02` | S1-01 §4 BR-06; Feature Contract F-02 §3 Validation/Data; System-Level SDS §1 clock source, §4 error/API envelope | `AC-13`; `T-05b` (Unit), `T-06b` (API/DB no-write); regression `T-04`, `T-12`, `T-13` | `server/src/app.ts` → event router → validator/service; `server/src/events/service.test.ts`; `server/src/events.integration.test.ts`; `client/src/api/events.ts`; `client/src/ui/EventWorkspace.tsx`; `e2e/registration.spec.ts` |
+
+**Fixture impact for CR #49:** ตรึง application clock ผ่าน `createApp(options)` ใน `service.test.ts` และ `events.integration.test.ts` สำหรับวันที่เดิม `2026-11-15`; เปลี่ยน `e2e/registration.spec.ts` ที่ใช้ `2027-01-15T10:00` ให้สัมพันธ์กับเวลาทดสอบหรือใช้ clock คงที่. `e2e/fixtures.ts` ที่ INSERT Event ลง DB โดยตรงเป็น test setup โดยตั้งใจและข้าม publication API จึงไม่ใช่การทดสอบ BR-06. หาก fixture เดิมคาด `201` แต่เปลี่ยนเพราะ BR-06 ให้บันทึกว่า revised because of BR-06 ไม่ลบ expected result เดิมโดยไม่อธิบาย.
+
 TDD ที่จะเก็บเป็นหลักฐาน: รัน T-08/T-09 และกรณีข้ามเจ้าของของ T-10/T-11 ให้เห็น **red ที่ assertion ของพฤติกรรม** หลัง harness/fixture พร้อม → แก้ implementation → รัน **green** และ regression. T-09 ต้องแสดง contention ที่ lock จริง ไม่ใช่เพียง overlap ที่ client สังเกต; หาก instrumentation ไม่พร้อม ให้ทำ harness ให้ตรวจการ block ก่อนอ้างผล. การรันที่ล้มเพราะต่อ DB ไม่ได้ไม่นับเป็นหลักฐาน red. อย่าลด assertion หรือปิด test เพื่อให้ผ่าน
 
 ## 7. Definition of Done และหลักฐาน
@@ -112,7 +125,7 @@ TDD ที่จะเก็บเป็นหลักฐาน: รัน T-08
 | Feature | เงื่อนไขเฉพาะก่อนถือว่าเสร็จ |
 |---|---|
 | F-01 | Login/me/logout ใช้บัญชีจริงในฐานทดสอบ, session revoke/expiry ทำงาน, T-01–T-03 และ UI ส่วน auth ใน T-13 ผ่าน |
-| F-02 | การ publish มาจาก Organizer จริงและ Participant อ่านได้, validation/ownership ผ่าน T-04–T-06, ตรวจ persistence และ UI ตาม T-12/T-13 |
+| F-02 | การ publish มาจาก Organizer จริงและ Participant อ่านได้; validation/ownership ผ่าน T-04–T-06; BR-06 ผ่าน T-05b/T-06b และ AC-13; ตรวจ persistence และ UI ตาม T-12/T-13 |
 | F-03 | การลงทะเบียนปกติ/ซ้ำ/เต็ม/พร้อมกันและสิทธิ์ผ่าน T-07–T-10; T-12–T-14 พิสูจน์อ่านกลับ/ข้อความใน UI ตามสัญญา |
 | F-04 | Organizer เจ้าของเท่านั้นเห็น roster ที่มีข้อมูลขั้นต่ำ, T-11–T-14 ครอบคลุมสิทธิ์, การอ่านหลัง restart และ UI |
 
@@ -143,3 +156,13 @@ These are local command results, not GitHub Actions results. GitHub reported no 
 **จุดให้ทีมตรวจ:** ขอบเขต field/เวลาเริ่มที่ยังไม่ปิดรับอัตโนมัติ, อายุ session และกติกา Origin, ลำดับ duplicate ก่อน full, roster ขั้นต่ำและ `404` ข้ามเจ้าของ, ตลอดจนกลไกทดสอบการแข่งที่นั่งสุดท้าย. หากแก้พฤติกรรมหลังอนุมัติ ให้บันทึก revision และเหตุผลก่อนเขียนโค้ดในส่วนที่กระทบ
 
 **บันทึกการปรับ v0.2 หลัง audit:** เพิ่มการพิสูจน์ว่า T-09 มีสอง request รอล็อกของ Event เดียวกันทั้งทางตรงหรือผ่านคิว, ทำ T-10 ด้วยข้อมูล A/B ที่ไม่ว่างและตรวจรายการ owner-scoped, ขยาย auth/CSRF negative tests, เพิ่ม README/reproducibility/evidence ใน DoD และชี้ Lab 5 R/C เป็นงานภายหลัง
+
+
+## 8. Change control record — Lab 7 CR #49
+
+- **Version:** v0.3 amendment, 28 พฤศจิกายน 2026; อัปเดตสัญญาและ STS ก่อน test/code ตามลำดับที่ Lab 7 กำหนด.
+- **Accepted baseline:** tag `lab5-sec131-punice-final` → `b56826459da848342028a5b93e885f9cceaa3dcd` (Lab 5 release).
+- **ประกาศที่ใช้กับข้ออนุมัติ:** ภาพประกาศ “Lab 7 Spec Sheet Change” ระบุว่าไม่ต้องขอ Instructor/TA Approval สำหรับ change request ที่แก้ Sprint 1; ภาพที่ทีมเก็บไว้ไม่แสดงชื่อผู้ประกาศ/วันโพสต์/ช่องทาง จึงไม่อ้าง TA approval รายกรณีหรือเติม metadata ที่ไม่มี.
+- **Pre-change code:** `staging` → `c2d5aea2ad2249064e3f950ea05a4b129687050f`; RED test ต้องตรวจพฤติกรรมของ implementation ณ SHA นี้.
+- **Review sequence:** Khawpun124 เห็นชอบขอบเขต CR และแผนใน Issue #49 comment v2 (`#issuecomment-7225800257`) และรีวิวรอบสามให้เริ่ม docs ได้ (`#issuecomment-7225947659`). PR นี้ขอให้ Khawpun ตรวจเอกสาร diff จริง; จนกว่าจะรีวิว PR ยังไม่มี test commit หรือ implementation.
+- **Scope of this amendment:** BR-06, F-02 §3, AC-13, T-05b/T-06b, fixture/impact traceability และ application clock design; ไม่มีการเปลี่ยน schema หรือแก้โค้ดใน docs commit นี้.
