@@ -16,6 +16,8 @@ describe("Sprint 1 F-02 / F-04 — Publish, Discover & Organizer Roster", () => 
   let cookieB: string;
   let cookieParticipant: string;
   const appOrigin = "http://127.0.0.1:5173";
+  // Keep legacy API fixtures at 2026-11-15 valid under BR-06 without depending on wall time.
+  const suiteNow = new Date("2026-11-01T00:00:00.000Z");
   const passwordHash = "$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$RdescudvJCsgqlfreOJRomJKitBgyAzG0qnqvsjfAZU";
   const MISSING_EVENT_ID = "9f1c2d3e-4b5a-4c6d-8e7f-0a1b2c3d4e5f";
 
@@ -36,7 +38,7 @@ describe("Sprint 1 F-02 / F-04 — Publish, Discover & Organizer Roster", () => 
   beforeAll(async () => {
     if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL must be supplied by the guarded integration runner.");
     prisma = createPrismaClient();
-    server = createServer(createApp({ prisma, appOrigin, secureCookies: false }));
+    server = createServer(createApp({ prisma, appOrigin, secureCookies: false, clock: () => suiteNow }));
     await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("Expected a loopback test server address.");
@@ -100,14 +102,13 @@ describe("Sprint 1 F-02 / F-04 — Publish, Discover & Organizer Roster", () => 
 
   it("T-06b / AC-13: enforces the fixed-clock boundary through the publish API and writes only accepted events", async () => {
     const fixedNow = new Date("2026-11-28T12:00:00.000Z");
-    const appOptions = { prisma, appOrigin, secureCookies: false, clock: () => fixedNow };
-    const testServer = createServer(createApp(appOptions as unknown as Parameters<typeof createApp>[0]));
+    const testServer = createServer(createApp({ prisma, appOrigin, secureCookies: false, clock: () => fixedNow }));
     await new Promise<void>(resolve => testServer.listen(0, "127.0.0.1", resolve));
-    const address = testServer.address();
-    if (!address || typeof address === "string") throw new Error("Expected a loopback fixed-clock test server address.");
-    const testOrigin = `http://127.0.0.1:${address.port}`;
 
     try {
+      const address = testServer.address();
+      if (!address || typeof address === "string") throw new Error("Expected a loopback fixed-clock test server address.");
+      const testOrigin = `http://127.0.0.1:${address.port}`;
       const before = await prisma.event.count();
       const publishAt = async (startsAt: string) => {
         const response = await fetch(`${testOrigin}/api/events`, {

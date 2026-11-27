@@ -7,7 +7,7 @@ import { listOrganizerRoster } from "./roster.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function createEventsRouter(prisma: PrismaClient): Router {
+export function createEventsRouter(prisma: PrismaClient, clock: () => Date = () => new Date()): Router {
   const router = Router();
   const noStore = (_req: Request, res: Response, next: NextFunction) => {
     res.set("Cache-Control", "no-store");
@@ -15,7 +15,7 @@ export function createEventsRouter(prisma: PrismaClient): Router {
   };
 
   router.post("/events", noStore, requireAuth, requireRole([Role.ORGANIZER]), async (req: Request, res: Response) => {
-    const validation = validateCreateEvent(req.body);
+    const validation = validateCreateEvent(req.body, clock());
     if (!validation.value) {
       return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Event details are invalid.", fields: validation.fields ?? {} } });
     }

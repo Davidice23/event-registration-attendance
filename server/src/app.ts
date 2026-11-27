@@ -14,6 +14,8 @@ export interface AppOptions {
   secureCookies?: boolean;
   /** Deployed commit SHA reported by the health endpoint. */
   appCommitSha?: string;
+  /** Application clock used by request handlers; defaults to the current instant. */
+  clock?: () => Date;
   /** Directory of the built React client (`client/dist`). When set, the API also serves the UI. */
   clientDistDir?: string;
 }
@@ -49,6 +51,7 @@ export function createApp(options: AppOptions = {}) {
   }
   const secureCookies = options.secureCookies ?? (process.env.NODE_ENV === "production");
   const appCommitSha = options.appCommitSha ?? process.env.APP_COMMIT_SHA;
+  const clock = options.clock ?? (() => new Date());
 
   app.disable("x-powered-by");
 
@@ -82,7 +85,7 @@ export function createApp(options: AppOptions = {}) {
   // Auth routes: /api/auth/login, /api/auth/me, /api/auth/logout
   if (prisma) {
     app.use("/api/auth", createAuthRouter({ prisma, secureCookies }));
-    app.use("/api", createEventsRouter(prisma));
+    app.use("/api", createEventsRouter(prisma, clock));
     app.use("/api", createRegistrationsRouter(prisma));
   }
 
