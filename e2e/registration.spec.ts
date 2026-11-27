@@ -46,6 +46,8 @@ test("AC-13: organizer sees the localized error when publishing less than 24 hou
   await page.getByRole("button", { name: "เผยแพร่กิจกรรม" }).click();
 
   await expect(page.getByRole("alert")).toHaveText("เวลาเริ่มต้องห่างจากตอนนี้อย่างน้อย 24 ชั่วโมง");
+  await expect(page.getByLabel("ชื่อกิจกรรม")).toHaveValue(title);
+  await expect(page.getByText("เผยแพร่กิจกรรมแล้ว")).toHaveCount(0);
   await expect(eventCard(page, title)).toHaveCount(0);
 });
 
