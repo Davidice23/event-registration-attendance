@@ -98,6 +98,62 @@ describe("Sprint 1 F-02 / F-04 — Publish, Discover & Organizer Roster", () => 
     expect(await prisma.event.count()).toBe(1);
   });
 
+  it("T-06b / AC-13: enforces the fixed-clock boundary through the publish API and writes only accepted events", async () => {
+    const fixedNow = new Date("2026-11-28T12:00:00.000Z");
+    const appOptions = { prisma, appOrigin, secureCookies: false, clock: () => fixedNow };
+    const testServer = createServer(createApp(appOptions as unknown as Parameters<typeof createApp>[0]));
+    await new Promise<void>(resolve => testServer.listen(0, "127.0.0.1", resolve));
+    const address = testServer.address();
+    if (!address || typeof address === "string") throw new Error("Expected a loopback fixed-clock test server address.");
+    const testOrigin = `http://127.0.0.1:${address.port}`;
+
+    try {
+      const before = await prisma.event.count();
+      const publishAt = async (startsAt: string) => {
+        const response = await fetch(`${testOrigin}/api/events`, {
+          method: "POST",
+          headers: { Origin: appOrigin, "Content-Type": "application/json", Cookie: cookieA },
+          body: JSON.stringify({ title: "Lead time", description: "Intro", startsAt, location: "Hall", capacity: 1 }),
+        });
+        const payload = await response.json() as { error?: { code?: string; fields?: Record<string, string> } };
+        return { status: response.status, code: payload.error?.code ?? null, startsAtMessage: payload.error?.fields?.startsAt ?? null };
+      };
+
+      const boundary = await publishAt(new Date(fixedNow.getTime() + 24 * 60 * 60 * 1000).toISOString());
+      const afterBoundary = await prisma.event.count();
+      const oneMillisecondEarly = await publishAt(new Date(fixedNow.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString());
+      const afterOneMillisecondEarly = await prisma.event.count();
+      const inThePast = await publishAt(new Date(fixedNow.getTime() - 1).toISOString());
+      const afterPast = await prisma.event.count();
+
+      expect({
+        boundaryStatus: boundary.status,
+        afterBoundary,
+        oneMillisecondEarlyStatus: oneMillisecondEarly.status,
+        oneMillisecondEarlyCode: oneMillisecondEarly.code,
+        oneMillisecondEarlyMessage: oneMillisecondEarly.startsAtMessage,
+        afterOneMillisecondEarly,
+        pastStatus: inThePast.status,
+        pastCode: inThePast.code,
+        pastMessage: inThePast.startsAtMessage,
+        afterPast,
+      }).toEqual({
+        boundaryStatus: 201,
+        afterBoundary: before + 1,
+        oneMillisecondEarlyStatus: 400,
+        oneMillisecondEarlyCode: "VALIDATION_ERROR",
+        oneMillisecondEarlyMessage: "Must be at least 24 hours after the current server time.",
+        afterOneMillisecondEarly: before + 1,
+        pastStatus: 400,
+        pastCode: "VALIDATION_ERROR",
+        pastMessage: "Must be at least 24 hours after the current server time.",
+        afterPast: before + 1,
+      });
+    } finally {
+      await new Promise<void>((resolve, reject) => testServer.close(error => error ? reject(error) : resolve()));
+    }
+  });
+
   it("sets no-store on event service errors", async () => {
     const failingPrisma = new Proxy(prisma, {
       get(target, property) {
