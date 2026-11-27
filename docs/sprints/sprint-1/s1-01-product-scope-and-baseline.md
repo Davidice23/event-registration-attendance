@@ -1,6 +1,6 @@
 # S1-01: Define Theme 3 product scope and Sprint 1 baseline
 
-สถานะ ณ 14 พ.ย. 2026: **ทีมยืนยัน Sprint 1 v0.2 ตามคำแจ้งของ Davidice23; เอกสารผ่าน PR #1; implementation F-01–F-04 ผ่าน PR #8–#12 เข้า `staging`; integrated local verification ผ่านบน tree ปัจจุบัน; ขอบเขต D-01–D-06 ไม่เปลี่ยน; ยังไม่มี reviewed release บน `main`**<br>
+สถานะ ณ 14 พ.ย. 2026: **ทีมยืนยัน Sprint 1 v0.2 ตามคำแจ้งของ Davidice23; เอกสารผ่าน PR #1; implementation F-01–F-04 ผ่าน PR #8–#12 เข้า `staging`; integrated local verification ผ่านบน tree ปัจจุบัน; ขอบเขต D-01–D-06 ไม่เปลี่ยน; ยังไม่มี reviewed release บน `main`**<br>**Amendment ณ 28 พ.ย. 2026:** v0.3 amendment สำหรับ Lab 7 CR #49; ดู change record ใน §7.<br>
 โครงการ: Event Registration and Attendance System (Theme 3)<br>
 GitHub: [Davidice23/event-registration-attendance](https://github.com/Davidice23/event-registration-attendance)<br>
 กำหนดส่งรอบนี้: 15 พฤศจิกายน 2026 ตามที่ผู้ใช้ยืนยัน (Lab 5 ระบุ 23:59; เวลาของ Deliverable 1 ให้ยึดประกาศเลื่อนจริง)<br>
@@ -90,6 +90,8 @@ Docker, CI/CD และ deployment เป็นสายงาน **Lab 5** ท�
 **Sprint 1 ส่งต่อ Lab 5 ได้เมื่อ:** ทำงานผ่าน Issue → feature/fix branch จาก staging → PR เข้า staging ที่เพื่อนร่วมทีมตรวจอย่างมีสาระ → integration tests → reviewed release PR เข้า `main` แล้วมี tag หรือ commit SHA ของ release ที่รันได้จริง บันทึก setup, คำสั่ง, ผลทดสอบ และเวอร์ชันที่ทดสอบให้ตรงกับ release; ถ้ามีผล fail/skip ให้รายงาน ไม่อ้างผลจาก commit อื่นหรืออ้างว่าอาจารย์ตรวจรับแล้วโดยไม่มีหลักฐาน การส่งต่อเป็น baseline สำหรับทำข้อกำหนด Lab 5 (Docker/CI/CD/deployment) ไม่ได้แปลว่า R-01–R-12 หรือ C-01–C-06 เสร็จแล้ว และไม่ใช่หลักฐาน deploy/ตรวจรับ
 
 **บันทึกการปรับแผน v0.2:** เพิ่มผลลัพธ์/เกณฑ์ออกจากแต่ละ Sprint และแยกวัน checkpoint ของ Group Project ออกจากกำหนดส่ง Lab 5 โดยไม่เปลี่ยนการตัดสินใจ D-01 ถึง D-06 ดู [บันทึกการยืนยัน Sprint 1 v0.2](s1-02-system-level-sds.md)
+
+**บันทึกการปรับแผน Lab 7 CR #49 (v0.3 amendment, 28 พ.ย. 2026):** เพิ่ม BR-06 สำหรับ FR-02/F-02 โดยไม่เปลี่ยนขอบเขตของ F-06; version references และ review history อยู่ใน [Feature Contracts & STS §8](s1-02-feature-contracts-and-sts.md).
 
 ## เอกสารอ้างอิง
 
