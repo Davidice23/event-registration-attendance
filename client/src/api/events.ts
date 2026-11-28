@@ -14,14 +14,16 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     let code = "UNKNOWN_ERROR";
     let message = "The request could not be completed.";
+    let fields: Record<string, string> | undefined;
     try {
       const payload = (await response.json()) as ApiErrorPayload;
       if (payload.error) {
         code = payload.error.code;
         message = payload.error.message;
+        fields = payload.error.fields;
       }
     } catch { /* Keep the safe fallback. */ }
-    throw new AuthApiError(message, code);
+    throw new AuthApiError(message, code, fields);
   }
   const payload = (await response.json()) as { data: T };
   return payload.data;

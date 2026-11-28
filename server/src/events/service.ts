@@ -23,6 +23,7 @@ export interface ValidationResult {
 }
 
 const EXPECTED_KEYS = ["capacity", "description", "location", "startsAt", "title"];
+const MIN_PUBLISH_LEAD_MS = 24 * 60 * 60 * 1000;
 const RFC3339_WITH_OFFSET = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/;
 
 function isValidOffsetDateTime(value: string): boolean {
@@ -43,7 +44,7 @@ function isValidOffsetDateTime(value: string): boolean {
   return true;
 }
 
-export function validateCreateEvent(body: unknown): ValidationResult {
+export function validateCreateEvent(body: unknown, now: Date): ValidationResult {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     return { fields: { body: "Request body must be a JSON object." } };
   }
@@ -74,6 +75,8 @@ export function validateCreateEvent(body: unknown): ValidationResult {
   const startsAt = input.startsAt;
   if (typeof startsAt !== "string" || !isValidOffsetDateTime(startsAt)) {
     fields.startsAt = "Must be a valid ISO 8601 date-time with an explicit offset or Z.";
+  } else if (Date.parse(startsAt) - now.getTime() < MIN_PUBLISH_LEAD_MS) {
+    fields.startsAt = "Must be at least 24 hours after the current server time.";
   }
   const capacity = input.capacity;
   if (typeof capacity !== "number" || !Number.isInteger(capacity) || capacity < 1 || capacity > 2_147_483_647) {
