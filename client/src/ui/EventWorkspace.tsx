@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { getEvents, getOrganizerEvents, publishEvent, type EventSummary } from "../api/events";
 import { classifyRegisterError, getMyRegistrations, registerForEvent, type MyRegistration } from "../api/registrations";
-import type { CurrentUser } from "../api/auth";
+import { AuthApiError, type CurrentUser } from "../api/auth";
 import { formatBangkokDate } from "./format";
 
 interface Props { user: CurrentUser; onViewRoster?: (eventId: string) => void; }
@@ -83,7 +83,12 @@ export function EventWorkspace({ user, onViewRoster }: Props) {
       setTitle(""); setDescription(""); setStartsAt(""); setLocation(""); setCapacity("1");
       await refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "เผยแพร่กิจกรรมไม่สำเร็จ");
+      if (cause instanceof AuthApiError && cause.code === "VALIDATION_ERROR" &&
+        cause.fields?.startsAt === "Must be at least 24 hours after the current server time.") {
+        setError("เวลาเริ่มต้องห่างจากตอนนี้อย่างน้อย 24 ชั่วโมง");
+      } else {
+        setError(cause instanceof Error ? cause.message : "เผยแพร่กิจกรรมไม่สำเร็จ");
+      }
     } finally {
       setBusy(false);
     }

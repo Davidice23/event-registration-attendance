@@ -13,12 +13,42 @@ const MY_REGISTRATIONS_GET = /\/api\/my\/registrations$/;
 
 let users: Awaited<ReturnType<typeof resetDatabase>>;
 
+function bangkokDateTimeInputAfterHours(hours: number): string {
+  const parts = new Map(new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(Date.now() + hours * 60 * 60 * 1000)).map(part => [part.type, part.value] as const));
+  const part = (name: string) => parts.get(name) ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
+}
+
 test.beforeEach(async () => {
   users = await resetDatabase();
 });
 
 test.afterAll(async () => {
   await closePool();
+});
+
+test("AC-13: organizer sees the localized error when publishing less than 24 hours ahead", async ({ page }) => {
+  const title = "Too Soon Workshop";
+  await signIn(page, "organizerA");
+  await page.getByLabel("ชื่อกิจกรรม").fill(title);
+  await page.getByLabel("รายละเอียด").fill("Hands-on session");
+  await page.getByLabel("วันและเวลา (เวลาไทย ICT, UTC+7)").fill(bangkokDateTimeInputAfterHours(23));
+  await page.getByLabel("สถานที่").fill("Hall A");
+  await page.getByLabel("จำนวนที่นั่ง").fill("2");
+  await page.getByRole("button", { name: "เผยแพร่กิจกรรม" }).click();
+
+  await expect(page.getByRole("alert")).toHaveText("เวลาเริ่มต้องห่างจากตอนนี้อย่างน้อย 24 ชั่วโมง");
+  await expect(page.getByLabel("ชื่อกิจกรรม")).toHaveValue(title);
+  await expect(page.getByText("เผยแพร่กิจกรรมแล้ว")).toHaveCount(0);
+  await expect(eventCard(page, title)).toHaveCount(0);
 });
 
 test("T-13 / AC-11: organizer publishes, participant registers, and organizer later reads the roster", async ({ page }) => {
@@ -29,7 +59,7 @@ test("T-13 / AC-11: organizer publishes, participant registers, and organizer la
   await expect(page).toHaveURL(/\/organizer\/events$/);
   await page.getByLabel("ชื่อกิจกรรม").fill(title);
   await page.getByLabel("รายละเอียด").fill("Hands-on session");
-  await page.getByLabel("วันและเวลา (เวลาไทย ICT, UTC+7)").fill("2027-01-15T10:00");
+  await page.getByLabel("วันและเวลา (เวลาไทย ICT, UTC+7)").fill(bangkokDateTimeInputAfterHours(48));
   await page.getByLabel("สถานที่").fill("Hall A");
   await page.getByLabel("จำนวนที่นั่ง").fill("2");
   await page.getByRole("button", { name: "เผยแพร่กิจกรรม" }).click();
